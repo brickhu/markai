@@ -505,24 +505,32 @@ def export_entries(fmt: str = "json") -> str:
 # ── CLI ─────────────────────────────────────────────────
 def main():
     args = sys.argv[1:]
-    if not args or args[0] in ('--help', '-h'):
-        print("""MarkAI · 个人 AI 知识库
-用法: markai <command> [args...]
 
-命令:
-  search     搜索         markai search "关键词" [--ranked]
+    # 无参数 → 启动 Web Server
+    if not args:
+        port = 8888
+        script = Path(__file__).parent / "serve.py"
+        print(f"📌 MarkAI Web UI starting at http://localhost:{port}")
+        print(f"   打开浏览器访问即可浏览和搜索知识库")
+        print(f"   按 Ctrl+C 停止\n")
+        os.execv(sys.executable, ["python3", str(script), "--port", str(port)])
+
+    if args[0] in ('--help', '-h'):
+        print("""MarkAI · 个人 AI 知识库
+
+默认启动: 直接输入 markai 打开 Web UI → http://localhost:8888
+
+CLI 命令（供脚本/高级使用）:
+  search     搜索         markai search "关键词"
   check      重复检测     markai check "内容"
-  list       浏览         markai list [--json] [--page 2] [--limit 10] [--subtype contact]
+  list       列出         markai list [--json] [--subtype contact]
   get        查看详情     markai get <id>
   delete     删除         markai delete <id>
-  calendar   生成日历     markai calendar <id>
   types      类型统计     markai types
   stats      统计         markai stats
-  serve      Web 启动      markai serve --port 8888
   export     导出         markai export [--format json|md]
 
 数据目录: ~/.markai/brain.db
-存储操作请通过 Agent 对话完成。
 """, file=sys.stderr)
         sys.exit(0)
 
