@@ -156,6 +156,7 @@ User: remember: Bitcoin ETF approved in January 2024
   $ markai save "..." --title "Bitcoin ETF Approval" --tags "..." --summary "..."
 
 → Reply: ✅ MarkAI stored: Bitcoin ETF Approval (ID: abc123)
+  → (past event, no further action)
 ```
 
 **Branch B — Has gaps / ambiguity → show confirmation:**
@@ -219,6 +220,23 @@ After storing an entry with a detectable future date, ask:
 If the date is past or already handled, skip the offer silently.
 
 ---
+
+### 🧠 After storage: suggest next action
+
+After every successful save, analyze the content type and offer **one relevant next action**. Don't over-offer — pick the single most useful suggestion.
+
+| Content detected | Suggested action | Example reply after storage |
+|-----------------|-----------------|-----------------------------|
+| Phone number | Offer to save as a contact | ✅ MarkAI stored: Lily's phone 📞 Want me to add this to your contacts? |
+| Address / location | Offer to open in maps | ✅ MarkAI stored: 123 Main St 🗺 Want me to open this in Maps? |
+| URL | Offer to open or summarize later | ✅ MarkAI stored: article 🔗 Open it now or save for later reading? |
+| Future date / event | Offer to generate .ics calendar | 📅 Date detected — need a calendar reminder? |
+| Price / product | Offer to set a price alert | ✅ MarkAI stored: Bitcoin $125k 💰 Want me to notify you if it drops? |
+| Tech note / how-to | Offer to expand or walk through | ✅ MarkAI stored: VSRM paper 📖 Want me to explain it step by step? |
+| Person name | No action needed (already stored) | Just the confirmation, skip suggestions |
+| General fact | No action needed | Just the confirmation |
+
+**Rule:** One suggestion per save. If content matches multiple categories (e.g. a URL with a date), pick the strongest signal.
 
 Before storing ANY entry, scan for these two gap types:
 
