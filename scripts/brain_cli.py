@@ -505,10 +505,27 @@ def export_entries(fmt: str = "json") -> str:
 # ── CLI ─────────────────────────────────────────────────
 def main():
     args = sys.argv[1:]
-    if not args:
-        print("MarkAI · 个人 AI 知识库\n用法: markai <command> [args...]", file=sys.stderr)
-        print("命令: save, update, search, check, list, get, delete, calendar, types, stats, export", file=sys.stderr)
-        sys.exit(1)
+    if not args or args[0] in ('--help', '-h'):
+        print("""MarkAI · 个人 AI 知识库
+用法: markai <command> [args...]
+
+命令:
+  save       存储知识     markai save "内容" --title "标题" --tags "a,b"
+                         支持 --subtype <type> --structured '{"key":"val"}'
+  update     更新条目     markai update <id> --title "新标题"
+  search     搜索         markai search "关键词" [--ranked]
+  check      重复检测     markai check "内容"
+  list       列出         markai list [--limit 20] [--subtype contact]
+  get        查看详情     markai get <id>
+  delete     删除         markai delete <id>
+  calendar   生成日历     markai calendar <id>
+  types      类型统计     markai types
+  stats      统计         markai stats
+  export     导出         markai export [--format json|md]
+
+数据目录: ~/.markai/brain.db
+""", file=sys.stderr)
+        sys.exit(0)
 
     init_db()
     cmd = args[0].lower()
