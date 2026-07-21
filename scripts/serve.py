@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""MarkAI Web Server — SSR dual-column + detail page"""
-import json, sys, os, http.server, urllib.parse, html
+"""MarkAI Web Server — SSR dual-column + detail + stats + delete"""
+import json, sys, os, http.server, urllib.parse, html, re
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from brain_cli import init_db, list_entries, search_entries_ranked, get_entry, get_typed, get_all_types, get_stats
+from brain_cli import init_db, list_entries, search_entries_ranked, get_entry, get_typed, get_all_types, get_stats, delete_entry
 
 HOST = "127.0.0.1"
 
@@ -19,6 +19,86 @@ TYPE_STYLES = {
     "idea":      {"bg": "#2e1e5f", "icon": "💡", "border": "#8b5cf6"},
 }
 DEFAULT_STYLE = {"bg": "#1e1e2e", "icon": "📌", "border": "#475569"}
+BASE_CSS = """
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0f0f1a;color:#e0e0e0;min-height:100vh}
+.wrapper{display:flex;min-height:100vh}
+.sidebar{width:240px;flex-shrink:0;background:#16162a;border-right:1px solid #2a2a3e;padding:24px 16px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.logo{font-size:20px;font-weight:700;color:#a78bfa;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.logo small{font-size:12px;color:#666;font-weight:400}
+.nav-section{margin-bottom:16px}
+.nav-section-title{font-size:11px;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-left:4px}
+.nav-btn{display:block;padding:8px 12px;border-radius:8px;color:#aaa;text-decoration:none;font-size:13px;transition:0.15s;margin-bottom:2px}
+.nav-btn:hover{background:#1e1e3a;color:#a78bfa}
+.nav-btn.active{background:rgba(167,139,250,0.12);color:#a78bfa;font-weight:600;border-left:3px solid #a78bfa;padding-left:9px}
+.nav-btn[style*="--nav-c"]:hover{border-left-color:var(--nav-c)}
+.sidebar-footer{margin-top:auto;padding-top:16px;border-top:1px solid #2a2a3e;font-size:11px;color:#555}
+.sidebar-footer a{color:#a78bfa;display:block;padding:6px 0;font-size:12px}
+.sidebar-footer a:hover{color:#c4b5fd}
+.main{flex:1;padding:24px 32px;overflow-y:auto;max-width:1000px}
+a{color:inherit;text-decoration:none}
+.search-bar{display:flex;gap:10px;margin-bottom:24px}
+.search-bar input{flex:1;padding:10px 16px;border:1px solid #2a2a3e;border-radius:8px;background:#1a1a2e;color:#e0e0e0;font-size:15px;outline:none}
+.search-bar input:focus{border-color:#7c3aed}
+.search-bar button{padding:10px 20px;background:#7c3aed;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:15px}
+.search-bar button:hover{background:#6d28d9}
+.stats-line{color:#888;font-size:13px;margin-bottom:16px}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.card{border:1px solid;border-radius:12px;padding:16px;display:flex;gap:12px;transition:0.15s}
+.card:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,0,0,0.3)}
+.card-icon{font-size:24px;flex-shrink:0;width:36px;height:36px;display:flex;align-items:center;justify-content:center}
+.card-body{flex:1;min-width:0}
+.card-title{font-size:15px;font-weight:600;color:#f1f5f9;margin-bottom:4px;line-height:1.3}
+.card-meta{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px}
+.card-summary{font-size:13px;color:#94a3b8;line-height:1.4}
+hlt{background:#fbbf24;color:#0f0f1a;padding:0 3px;border-radius:3px}
+.mark{background:#fbbf24;color:#0f0f1a;padding:0 2px;border-radius:2px}
+.tag{display:inline-block;padding:1px 7px;border-radius:6px;background:rgba(255,255,255,0.08);font-size:11px;color:#a78bfa}
+.st{display:inline-block;padding:1px 7px;border-radius:6px;background:rgba(167,139,250,0.2);font-size:11px;color:#a78bfa;font-weight:600}
+.empty-state{text-align:center;padding:60px 20px}
+.empty-icon{font-size:48px;margin-bottom:16px}
+.empty-title{font-size:18px;color:#64748b;margin-bottom:8px}
+.empty-desc{font-size:14px;color:#475569}
+.breadcrumb{display:flex;align-items:center;gap:8px;font-size:13px;color:#64748b;margin-bottom:20px}
+.breadcrumb a{color:#a78bfa}
+.breadcrumb a:hover{color:#c4b5fd}
+.detail-header{display:flex;gap:16px;align-items:flex-start;margin-bottom:24px}
+.detail-icon{font-size:40px;width:56px;height:56px;display:flex;align-items:center;justify-content:center;border-radius:14px;border:1px solid;flex-shrink:0}
+.detail-title{font-size:22px;font-weight:700;color:#f1f5f9;line-height:1.3;margin-bottom:8px}
+.detail-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}
+.detail-section{margin-bottom:24px}
+.detail-section h3{font-size:12px;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #2a2a3e}
+.detail-summary{font-size:16px;color:#c4b5fd;line-height:1.6;padding:16px;background:#1a1a2e;border-radius:10px;border:1px solid #2a2a3e}
+.detail-content{font-size:15px;color:#94a3b8;line-height:1.8;white-space:pre-wrap;word-break:break-word}
+.sd-table{width:100%;border-collapse:collapse;font-size:14px}
+.sd-table td{padding:8px 12px;border-bottom:1px solid #2a2a3e;vertical-align:top}
+.sd-key{color:#64748b;width:120px;font-weight:600;white-space:nowrap}
+.sd-val{color:#e0e0e0;word-break:break-all}
+.source-link{color:#60a5fa;font-size:14px;word-break:break-all;display:inline-block;padding:8px 12px;background:#1a1a2e;border-radius:8px;border:1px solid #2a2a3e}
+.source-link:hover{border-color:#60a5fa}
+.detail-footer{margin-top:32px;padding-top:16px;border-top:1px solid #2a2a3e;font-size:12px;color:#555;display:flex;gap:16px;align-items:center}
+.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;transition:0.15s;display:inline-block;text-decoration:none}
+.btn-danger{background:#dc2626;color:#fff}
+.btn-danger:hover{background:#b91c1c}
+.btn-secondary{background:#2a2a3e;color:#aaa}
+.btn-secondary:hover{background:#3a3a5e;color:#e0e0e0}
+.confirm-box{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:12px;padding:32px;max-width:480px;margin:60px auto;text-align:center}
+.confirm-box h2{color:#f87171;margin-bottom:12px}
+.confirm-box p{color:#94a3b8;margin-bottom:24px;font-size:15px}
+.confirm-box .actions{display:flex;gap:12px;justify-content:center}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:12px;padding:20px;text-align:center}
+.stat-num{font-size:32px;font-weight:700;color:#a78bfa}
+.stat-label{font-size:13px;color:#64748b;margin-top:4px}
+.stat-list{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:12px;padding:16px}
+.stat-list-row{display:flex;justify-content:space-between;padding:6px 0;font-size:14px;border-bottom:1px solid #1e1e2e}
+.stat-list-row:last-child{border-bottom:none}
+.stat-list-key{color:#94a3b8}
+.stat-list-val{color:#a78bfa;font-weight:600}
+.stats-page h2{font-size:16px;color:#a78bfa;margin-bottom:12px;margin-top:24px}
+.stats-page h2:first-child{margin-top:0}
+@media(max-width:768px){.sidebar{width:100%;height:auto;position:static;flex-direction:row;flex-wrap:wrap;padding:12px 16px;border-right:none;border-bottom:1px solid #2a2a3e}.wrapper{flex-direction:column}.main{padding:16px}.nav-btn{font-size:12px;padding:6px 10px}.logo{margin-bottom:12px;width:100%}.card-grid{grid-template-columns:1fr}.stats-grid{grid-template-columns:1fr 1fr}}
+"""
 
 
 def esc(text):
@@ -26,20 +106,27 @@ def esc(text):
 
 
 def fmt_time(iso):
-    if not iso:
-        return ""
-    return iso[:10]
+    return iso[:10] if iso else ""
 
 
-def render_card_html(e):
+def highlight(text, query):
+    """Wrap matching keywords in <mark> tags."""
+    if not query or not text:
+        return esc(text)
+    escaped = esc(text)
+    escaped_q = re.escape(query)
+    return re.sub(f"({escaped_q})", r"<mark class='hlt'>\1</mark>", escaped, flags=re.IGNORECASE)
+
+
+def render_card_html(e, query=""):
     st = e.get("content_subtype", "") or ""
     style = TYPE_STYLES.get(st, DEFAULT_STYLE)
     icon = style["icon"]
     bg = style["bg"]
     border = style["border"]
     eid = esc(e.get("id", ""))
-    title = esc(e.get("title"))
-    summary = esc(e.get("summary") or "")
+    title = highlight(e.get("title"), query)
+    summary = highlight(e.get("summary") or "", query)
     tags_raw = e.get("tags", [])
     if isinstance(tags_raw, str):
         try:
@@ -68,7 +155,11 @@ def render_sidebar(types_list, active_type="", query="", back_params="", bottom_
         style = TYPE_STYLES.get(sn, DEFAULT_STYLE)
         cnt = t["count"]
         ac2 = "active" if active_type == sn else ""
-        nav_buttons += f'<a href="/?type={esc(sn)}{back_params}" class="nav-btn {ac2}" style="--nav-c:{style["border"]}">{style["icon"]} {esc(sn)} ({cnt})</a>\n'
+        qp = f"?q={urllib.parse.quote(query)}" if query else ""
+        href = f"/?type={esc(sn)}" + (f"&q={urllib.parse.quote(query)}" if query else "")
+        nav_buttons += f'<a href="{href}" class="nav-btn {ac2}" style="--nav-c:{style["border"]}">{style["icon"]} {esc(sn)} ({cnt})</a>\n'
+
+    total = sum(t["count"] for t in types_list)
     return f"""<div class="sidebar">
   <div class="logo">📌 MarkAI <small>v3</small></div>
   <div class="nav-section">
@@ -76,9 +167,49 @@ def render_sidebar(types_list, active_type="", query="", back_params="", bottom_
     {nav_buttons}
   </div>
   <div class="sidebar-footer">
+    <a href="/stats">📊 统计面板</a>
     {bottom_text}
   </div>
 </div>"""
+
+
+def render_page(entries, query, active_type, types_list):
+    entries_html = "\n".join(render_card_html(e, query) for e in entries)
+
+    esc_q = esc(query)
+    bt = f"?q={urllib.parse.quote(query)}" if query else (f"?type={urllib.parse.quote(active_type)}" if active_type else "")
+    sidebar = render_sidebar(types_list, active_type, query, bt, f"{len(entries)} 条记忆")
+
+    stats_parts = [f"{len(entries)} 条"]
+    if query:
+        stats_parts.append(f"搜索: {esc_q}")
+    if active_type:
+        stats_parts.append(f"类型: {esc(active_type)}")
+
+    empty_html = ""
+    if not entries:
+        reason = "搜索" if query else "类型筛选"
+        tip = "换个关键词试试" if query else ""
+        empty_html = f"""<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">暂无结果</div><div class="empty-desc">{reason}未匹配到任何条目。{tip}</div></div>"""
+
+    page_title = f"{esc_q} — MarkAI" if query else "MarkAI · 知识库"
+
+    return f"""<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{page_title}</title><style>{BASE_CSS}</style></head><body>
+<div class="wrapper">
+  {sidebar}
+  <div class="main">
+    <form class="search-bar" action="/" method="get">
+      <input type="text" name="q" placeholder="搜索知识库..." value="{esc_q}">
+      <button type="submit">搜索</button>
+    </form>
+    <div class="stats-line">{' · '.join(stats_parts)}</div>
+    {empty_html}
+    <div class="card-grid">{entries_html}</div>
+  </div>
+</div>
+</body></html>"""
 
 
 def render_detail_page(entry, back_q, back_type):
@@ -101,10 +232,9 @@ def render_detail_page(entry, back_q, back_type):
             tags_raw = json.loads(tags_raw)
         except (json.JSONDecodeError, TypeError):
             tags_raw = []
-    st_html = f'<span class="st">{esc(st)}</span>' if st else ""
     tags_html = "".join(f'<span class="tag">{esc(t)}</span>' for t in tags_raw)
+    st_html = f'<span class="st">{esc(st)}</span>' if st else ""
 
-    # Structured data
     sd = entry.get("structured_data", {})
     sd_html = ""
     if isinstance(sd, str):
@@ -113,18 +243,11 @@ def render_detail_page(entry, back_q, back_type):
         except (json.JSONDecodeError, TypeError):
             sd = {}
     if sd:
-        rows = "".join(
-            f'<tr><td class="sd-key">{esc(k)}</td><td class="sd-val">{esc(str(v))}</td></tr>'
-            for k, v in sd.items()
-        )
+        rows = "".join(f'<tr><td class="sd-key">{esc(k)}</td><td class="sd-val">{esc(str(v))}</td></tr>' for k, v in sd.items())
         sd_html = f'<div class="detail-section"><h3>结构化数据</h3><table class="sd-table">{rows}</table></div>'
 
-    source_html = (
-        f'<div class="detail-section"><h3>来源</h3><a href="{esc(source_url)}" class="source-link" target="_blank">{esc(source_url)}</a></div>'
-        if source_url else ""
-    )
+    source_html = f'<div class="detail-section"><h3>来源</h3><a href="{esc(source_url)}" class="source-link" target="_blank">{esc(source_url)}</a></div>' if source_url else ""
 
-    # Back link preserves search/filter state
     back = "/"
     if back_q:
         back += "?q=" + urllib.parse.quote(back_q)
@@ -132,49 +255,12 @@ def render_detail_page(entry, back_q, back_type):
         back += "?type=" + urllib.parse.quote(back_type)
 
     types_list = get_all_types()
-    sidebar = render_sidebar(types_list, back_type, back_q, "", f"当前条目: {eid}")
+    sidebar = render_sidebar(types_list, back_type, back_q, "", f"当前条目")
+    page_title = f"{title} — MarkAI"
 
     return f"""<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{title} — MarkAI</title>
-<style>
-*{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0f0f1a;color:#e0e0e0;min-height:100vh}}
-.wrapper{{display:flex;min-height:100vh}}
-.sidebar{{width:240px;flex-shrink:0;background:#16162a;border-right:1px solid #2a2a3e;padding:24px 16px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;overflow-y:auto}}
-.logo{{font-size:20px;font-weight:700;color:#a78bfa;margin-bottom:20px;display:flex;align-items:center;gap:8px}}
-.logo small{{font-size:12px;color:#666;font-weight:400}}
-.nav-section{{margin-bottom:16px}}
-.nav-section-title{{font-size:11px;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-left:4px}}
-.nav-btn{{display:block;padding:8px 12px;border-radius:8px;color:#aaa;text-decoration:none;font-size:13px;transition:.15s;margin-bottom:2px}}
-.nav-btn:hover{{background:#1e1e3a;color:#a78bfa}}
-.nav-btn.active{{background:rgba(167,139,250,0.12);color:#a78bfa;font-weight:600;border-left:3px solid #a78bfa;padding-left:9px}}
-.sidebar-footer{{margin-top:auto;padding-top:16px;border-top:1px solid #2a2a3e;font-size:11px;color:#555;word-break:break-all}}
-.main{{flex:1;padding:24px 32px;overflow-y:auto;max-width:800px}}
-a{{color:inherit;text-decoration:none}}
-.breadcrumb{{display:flex;align-items:center;gap:8px;font-size:13px;color:#64748b;margin-bottom:20px}}
-.breadcrumb a{{color:#a78bfa}}
-.breadcrumb a:hover{{color:#c4b5fd}}
-.breadcrumb span{{color:#64748b}}
-.detail-header{{display:flex;gap:16px;align-items:flex-start;margin-bottom:24px}}
-.detail-icon{{font-size:40px;width:56px;height:56px;display:flex;align-items:center;justify-content:center;border-radius:14px;border:1px solid;flex-shrink:0}}
-.detail-title{{font-size:22px;font-weight:700;color:#f1f5f9;line-height:1.3;margin-bottom:8px}}
-.detail-meta{{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}}
-.detail-section{{margin-bottom:24px}}
-.detail-section h3{{font-size:12px;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #2a2a3e}}
-.detail-summary{{font-size:16px;color:#c4b5fd;line-height:1.6;padding:16px;background:#1a1a2e;border-radius:10px;border:1px solid #2a2a3e;margin-bottom:0}}
-.detail-content{{font-size:15px;color:#94a3b8;line-height:1.8;white-space:pre-wrap;word-break:break-word}}
-.tag{{display:inline-block;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,0.08);font-size:11px;color:#a78bfa}}
-.st{{display:inline-block;padding:2px 8px;border-radius:6px;background:rgba(167,139,250,0.2);font-size:11px;color:#a78bfa;font-weight:600}}
-.sd-table{{width:100%;border-collapse:collapse;font-size:14px}}
-.sd-table td{{padding:8px 12px;border-bottom:1px solid #2a2a3e;vertical-align:top}}
-.sd-key{{color:#64748b;width:120px;font-weight:600;white-space:nowrap}}
-.sd-val{{color:#e0e0e0;word-break:break-all}}
-.source-link{{color:#60a5fa;font-size:14px;word-break:break-all;display:inline-block;padding:8px 12px;background:#1a1a2e;border-radius:8px;border:1px solid #2a2a3e}}
-.source-link:hover{{border-color:#60a5fa}}
-.detail-footer{{margin-top:32px;padding-top:16px;border-top:1px solid #2a2a3e;font-size:12px;color:#555;display:flex;gap:16px}}
-@media(max-width:768px){{.sidebar{{width:100%;height:auto;position:static;flex-direction:row;flex-wrap:wrap;padding:12px 16px;border-right:none;border-bottom:1px solid #2a2a3e}} .wrapper{{flex-direction:column}} .main{{padding:16px;max-width:100%}} .nav-btn{{font-size:12px;padding:6px 10px}} .logo{{margin-bottom:12px;width:100%}} .detail-header{{flex-direction:column}} .detail-icon{{width:48px;height:48px;font-size:32px}}}}
-</style></head><body>
+<title>{page_title}</title><style>{BASE_CSS}</style></head><body>
 <div class="wrapper">
   {sidebar}
   <div class="main">
@@ -184,7 +270,7 @@ a{{color:inherit;text-decoration:none}}
       <div class="detail-icon" style="background:{bg};border-color:{border}">{icon}</div>
       <div>
         <div class="detail-title">{title}</div>
-        <div class="detail-meta">{st_html if st else ""}{tags_html}</div>
+        <div class="detail-meta">{st_html}{tags_html}</div>
       </div>
     </div>
 
@@ -196,89 +282,91 @@ a{{color:inherit;text-decoration:none}}
     {source_html}
 
     <div class="detail-footer">
-      {f'<span>创建: {created}</span>' if created else ""}
-      {f'<span>更新: {updated}</span>' if updated else ""}
-      <span>ID: {eid}</span>
+      <div style="flex:1">
+        {f'<span>创建: {created}</span>' if created else ""}
+        {f' · 更新: {updated}</span>' if updated else ""}
+        <span style="margin-left:12px">ID: {eid}</span>
+      </div>
+      <a href="/delete?id={eid}" class="btn btn-danger">🗑 删除</a>
     </div>
   </div>
 </div>
 </body></html>"""
 
 
-def render_page(entries, query, active_type, types_list):
-    entries_html = "\n".join(render_card_html(e) for e in entries)
-
-    esc_q = esc(query)
-    back_params = f"?q={urllib.parse.quote(query)}" if query else (f"?type={urllib.parse.quote(active_type)}" if active_type else "")
-    sidebar = render_sidebar(types_list, active_type, query, back_params if back_params.startswith("?") else "", f"{len(entries)} 条记忆 · ~/.markai/brain.db")
-
-    stats_parts = [f"{len(entries)} 条"]
-    if query:
-        stats_parts.append(f"搜索: {esc_q}")
-    if active_type:
-        stats_parts.append(f"类型: {esc(active_type)}")
-
-    empty_html = ""
-    if not entries:
-        reason = "搜索" if query else "类型筛选"
-        tip = "换个关键词试试" if query else ""
-        empty_html = f"""<div class="empty-state">
-  <div class="empty-icon">🔍</div>
-  <div class="empty-title">暂无结果</div>
-  <div class="empty-desc">{reason}未匹配到任何条目。{tip}</div>
-</div>"""
+def render_confirm_delete(entry):
+    eid = esc(entry.get("id", ""))
+    title = esc(entry.get("title", ""))
+    types_list = get_all_types()
+    sidebar = render_sidebar(types_list, "", "", "", "确认删除")
 
     return f"""<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MarkAI</title>
-<style>
-*{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0f0f1a;color:#e0e0e0;min-height:100vh}}
-.wrapper{{display:flex;min-height:100vh}}
-.sidebar{{width:240px;flex-shrink:0;background:#16162a;border-right:1px solid #2a2a3e;padding:24px 16px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;overflow-y:auto}}
-.logo{{font-size:20px;font-weight:700;color:#a78bfa;margin-bottom:20px;display:flex;align-items:center;gap:8px}}
-.logo small{{font-size:12px;color:#666;font-weight:400}}
-.nav-section{{margin-bottom:16px}}
-.nav-section-title{{font-size:11px;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-left:4px}}
-.nav-btn{{display:block;padding:8px 12px;border-radius:8px;color:#aaa;text-decoration:none;font-size:13px;transition:.15s;margin-bottom:2px}}
-.nav-btn:hover{{background:#1e1e3a;color:#a78bfa}}
-.nav-btn.active{{background:rgba(167,139,250,0.12);color:#a78bfa;font-weight:600;border-left:3px solid #a78bfa;padding-left:9px}}
-.nav-btn[style*="--nav-c"]:hover{{border-left-color:var(--nav-c)}}
-.sidebar-footer{{margin-top:auto;padding-top:16px;border-top:1px solid #2a2a3e;font-size:11px;color:#555}}
-.main{{flex:1;padding:24px 32px;overflow-y:auto}}
-a{{color:inherit;text-decoration:none}}
-.search-bar{{display:flex;gap:10px;margin-bottom:24px}}
-.search-bar input{{flex:1;padding:10px 16px;border:1px solid #2a2a3e;border-radius:8px;background:#1a1a2e;color:#e0e0e0;font-size:15px;outline:none}}
-.search-bar input:focus{{border-color:#7c3aed}}
-.search-bar button{{padding:10px 20px;background:#7c3aed;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:15px}}
-.search-bar button:hover{{background:#6d28d9}}
-.stats-line{{color:#888;font-size:13px;margin-bottom:16px}}
-.card-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}}
-.card{{border:1px solid;border-radius:12px;padding:16px;display:flex;gap:12px;transition:.15s;cursor:pointer;display:flex}}
-.card:hover{{transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,0,0,0.3)}}
-.card-icon{{font-size:24px;flex-shrink:0;width:36px;height:36px;display:flex;align-items:center;justify-content:center}}
-.card-body{{flex:1;min-width:0}}
-.card-title{{font-size:15px;font-weight:600;color:#f1f5f9;margin-bottom:4px;line-height:1.3}}
-.card-meta{{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px}}
-.card-summary{{font-size:13px;color:#94a3b8;line-height:1.4}}
-.tag{{display:inline-block;padding:1px 7px;border-radius:6px;background:rgba(255,255,255,0.08);font-size:11px;color:#a78bfa}}
-.st{{display:inline-block;padding:1px 7px;border-radius:6px;background:rgba(167,139,250,0.2);font-size:11px;color:#a78bfa;font-weight:600}}
-.empty-state{{text-align:center;padding:60px 20px}}
-.empty-icon{{font-size:48px;margin-bottom:16px}}
-.empty-title{{font-size:18px;color:#64748b;margin-bottom:8px}}
-.empty-desc{{font-size:14px;color:#475569}}
-@media(max-width:768px){{.sidebar{{width:100%;height:auto;position:static;flex-direction:row;flex-wrap:wrap;padding:12px 16px;border-right:none;border-bottom:1px solid #2a2a3e}} .wrapper{{flex-direction:column}} .main{{padding:16px}} .nav-btn{{font-size:12px;padding:6px 10px}} .logo{{margin-bottom:12px;width:100%}} .card-grid{{grid-template-columns:1fr}}}}
-</style></head><body>
+<title>删除确认 — MarkAI</title><style>{BASE_CSS}</style></head><body>
 <div class="wrapper">
   {sidebar}
   <div class="main">
-    <form class="search-bar" action="/" method="get">
-      <input type="text" name="q" placeholder="搜索知识库..." value="{esc_q}">
-      <button type="submit">搜索</button>
-    </form>
-    <div class="stats-line">{' · '.join(stats_parts)}</div>
-    {empty_html}
-    <div class="card-grid">{entries_html}</div>
+  <div class="breadcrumb"><a href="/">← 首页</a><span>/</span><span>删除</span></div>
+  <div class="confirm-box">
+    <h2>⚠️ 确认删除</h2>
+    <p>确定要删除「{title}」吗？此操作不可撤销。</p>
+    <div class="actions">
+      <a href="/detail?id={eid}" class="btn btn-secondary">取消</a>
+      <a href="/delete?id={eid}&confirm=1" class="btn btn-danger">确认删除</a>
+    </div>
+  </div>
+  </div>
+</div>
+</body></html>"""
+
+
+def render_stats_page():
+    stats = get_stats()
+    types_data = get_all_types()
+    total = stats.get("total_entries", 0)
+    by_type = stats.get("by_type", {})
+    top_tags = stats.get("top_tags", [])
+    date_range = stats.get("date_range", {})
+    week = stats.get("recent_week", {})
+
+    type_rows = "".join(f'<div class="stat-list-row"><span class="stat-list-key">{esc(k)}</span><span class="stat-list-val">{v}</span></div>' for k, v in sorted(by_type.items()))
+    tag_rows = "".join(f'<div class="stat-list-row"><span class="stat-list-key">{esc(k[0])}</span><span class="stat-list-val">{k[1]}</span></div>' for k in top_tags[:15])
+    week_rows = "".join(f'<div class="stat-list-row"><span class="stat-list-key">{esc(k)}</span><span class="stat-list-val">{v}</span></div>' for k, v in sorted(week.items()))
+
+    first = date_range.get("first", "")[:10] if date_range.get("first") else "-"
+    last = date_range.get("last", "")[:10] if date_range.get("last") else "-"
+
+    types_list = get_all_types()
+    sidebar = render_sidebar(types_list, "", "", "", "统计面板")
+
+    return f"""<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>统计 — MarkAI</title><style>{BASE_CSS}</style></head><body>
+<div class="wrapper">
+  {sidebar}
+  <div class="main stats-page">
+    <h2>📊 统计概览</h2>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num">{total}</div><div class="stat-label">总条目</div></div>
+      <div class="stat-card"><div class="stat-num">{len(types_data)}</div><div class="stat-label">类型数</div></div>
+      <div class="stat-card"><div class="stat-num">{len(top_tags)}</div><div class="stat-label">标签数</div></div>
+      <div class="stat-card"><div class="stat-num">{sum(week.values())}</div><div class="stat-label">本周新增</div></div>
+    </div>
+
+    <h2>类型分布</h2>
+    <div class="stat-list">{type_rows}</div>
+
+    <h2>热门标签</h2>
+    <div class="stat-list">{tag_rows}</div>
+
+    <h2>最近活跃</h2>
+    <div class="stat-list">{week_rows}</div>
+
+    <h2>时间范围</h2>
+    <div class="stat-list">
+      <div class="stat-list-row"><span class="stat-list-key">最早</span><span class="stat-list-val">{esc(first)}</span></div>
+      <div class="stat-list-row"><span class="stat-list-key">最近</span><span class="stat-list-val">{esc(last)}</span></div>
+    </div>
   </div>
 </div>
 </body></html>"""
@@ -322,6 +410,26 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 html = render_detail_page(entry, back_q, back_type)
                 self._html(html)
 
+            elif path == "/delete":
+                entry_id = params.get("id", "").strip()
+                if not entry_id:
+                    self._html(render_page([], "", "", get_all_types()))
+                    return
+                entry = get_entry(entry_id)
+                if not entry:
+                    self._html(render_page([], "", "", get_all_types()))
+                    return
+                if params.get("confirm") == "1":
+                    delete_entry(entry_id)
+                    self.redirect("/")
+                    return
+                html = render_confirm_delete(entry)
+                self._html(html)
+
+            elif path == "/stats":
+                html = render_stats_page()
+                self._html(html)
+
             elif path == "/api/list":
                 page = int(params.get("page", 1))
                 limit = int(params.get("limit", 99999))
@@ -353,6 +461,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(body)
+
+    def redirect(self, url):
+        self.send_response(302)
+        self.send_header("Location", url)
+        self.send_header("Connection", "close")
+        self.end_headers()
 
     def json(self, data, code=200):
         payload = json.dumps(data, ensure_ascii=False).encode("utf-8")
