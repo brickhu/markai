@@ -3,7 +3,7 @@
 import json, sys, os, http.server, urllib.parse, html, re
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from brain_cli import init_db, list_entries, search_entries_ranked, get_entry, get_typed, get_all_types, get_stats, delete_entry, get_extracts, get_extract_types_with_counts, add_extract, get_db
+from brain_cli import init_db, list_entries, search_entries_ranked, get_entry, get_typed, get_all_types, get_stats, delete_entry, get_extracts, get_extract_types_with_counts, add_extract
 
 HOST = "127.0.0.1"
 
@@ -32,9 +32,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0f0f1a;
 .nav-btn:hover{background:#1e1e3a;color:#a78bfa}
 .nav-btn.active{background:rgba(167,139,250,0.12);color:#a78bfa;font-weight:600;border-left:3px solid #a78bfa;padding-left:9px}
 .nav-btn[style*="--nav-c"]:hover{border-left-color:var(--nav-c)}
-.nav-tag{display:inline-block;padding:2px 8px;border-radius:6px;background:rgba(167,139,250,0.08);color:#a78bfa;font-size:11px;margin:2px 2px;text-decoration:none;transition:0.15s}
-.nav-tag:hover{background:rgba(167,139,250,0.2)}
-.tag-cloud{margin:4px 0 8px;display:flex;flex-wrap:wrap}
+.nav-btn-add{color:#a78bfa;font-size:12px;border:1px dashed #2a2a3e;text-align:center;padding:6px;border-radius:8px;margin-top:4px}
+.nav-btn-add:hover{background:rgba(167,139,250,0.08);border-color:#a78bfa}
+.nav-divider{height:1px;background:#2a2a3e;margin:8px 0}
 .sidebar-footer{margin-top:auto;padding-top:16px;border-top:1px solid #2a2a3e;font-size:11px;color:#555}
 .sidebar-footer a{color:#a78bfa;display:block;padding:6px 0;font-size:12px}
 .sidebar-footer a:hover{color:#c4b5fd}
@@ -150,60 +150,36 @@ def render_card_html(e, query=""):
 
 
 def render_sidebar(types_list, active_type="", query="", back_params="", bottom_text="", show_all_active=True):
-    total_records = list_entries(limit=99999)
-    rec_count = len(total_records)
-    ac = "active" if show_all_active and not active_type and not query else ""
+    ac_rec = "active" if show_all_active and not active_type and not query else ""
 
-    # Records section
-    records_html = f'<a href="/" class="nav-btn {ac}">📋 全部笔记 ({rec_count})</a>\n'
+    top_html = f"""
+  <a href="/" class="nav-btn {ac_rec}">📋 Records</a>
+  <a href="/stats" class="nav-btn">📊 统计</a>"""
 
-    # 获取标签
-    conn = get_db()
-    tag_rows = conn.execute("SELECT tags FROM entries WHERE tags != '[]'").fetchall()
-    conn.close()
-    tag_freq = {}
-    for r in tag_rows:
-        try:
-            for t in json.loads(r["tags"]):
-                tag_freq[t] = tag_freq.get(t, 0) + 1
-        except Exception:
-            pass
-    top_tags = sorted(tag_freq.items(), key=lambda x: -x[1])[:15]
-    tags_html = "".join(
-        f'<a href="/?tag={esc(t)}" class="nav-tag">{esc(t)} ({c})</a>'
-        for t, c in top_tags
-    )
-
-    # Lists section
     lists_html = ""
     for t in types_list:
         sn = t["name"]
-        icon = t.get("icon", "📌")
+        icon = t.get("icon", "\U0001f4cc")
         cnt = t.get("count", 0)
         ac2 = "active" if active_type == sn else ""
         href = f"/list?type={esc(sn)}"
         lists_html += f'<a href="{href}" class="nav-btn {ac2}" style="--nav-c:{t["color"]}">{icon} {esc(sn)} ({cnt})</a>\n'
 
     return f"""<div class="sidebar">
-  <div class="logo">📌 MarkAI <small>v3</small></div>
+  <div class="logo">\U0001f4cc MarkAI <small>v3</small></div>
   <div class="nav-section">
-    <div class="nav-section-title">📋 Records · 笔记</div>
-    {records_html}
+    {top_html}
   </div>
+  <div class="nav-divider"></div>
   <div class="nav-section">
-    <div class="nav-section-title">🏷 标签</div>
-    <div class="tag-cloud">{tags_html}</div>
-  </div>
-  <div class="nav-section">
-    <div class="nav-section-title">📊 Lists · 清单</div>
+    <div class="nav-section-title">\U0001f4ca Lists</div>
     {lists_html}
+    <a href="/lists/new" class="nav-btn nav-btn-add">+ Add a list</a>
   </div>
   <div class="sidebar-footer">
-    <a href="/stats">📊 统计面板</a>
     {bottom_text}
   </div>
 </div>"""
-
 
 def render_page(entries, query, active_type, types_list):
     entries_html = "\n".join(render_card_html(e, query) for e in entries)
