@@ -3,7 +3,7 @@
 import json, sys, os, http.server, urllib.parse, html, re
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from brain_cli import init_db, list_entries, search_entries_ranked, get_entry, get_typed, get_all_types, get_stats, delete_entry, get_extracts, get_extract_types_with_counts, add_extract
+from brain_cli import init_db, list_entries, search_entries_ranked, get_entry, get_typed, get_all_types, get_stats, delete_entry, get_extracts, get_extract_types_with_counts, add_extract, get_db
 
 HOST = "127.0.0.1"
 
@@ -32,6 +32,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0f0f1a;
 .nav-btn:hover{background:#1e1e3a;color:#a78bfa}
 .nav-btn.active{background:rgba(167,139,250,0.12);color:#a78bfa;font-weight:600;border-left:3px solid #a78bfa;padding-left:9px}
 .nav-btn[style*="--nav-c"]:hover{border-left-color:var(--nav-c)}
+.nav-tag{display:inline-block;padding:2px 8px;border-radius:6px;background:rgba(167,139,250,0.08);color:#a78bfa;font-size:11px;margin:2px 2px;text-decoration:none;transition:0.15s}
+.nav-tag:hover{background:rgba(167,139,250,0.2)}
+.tag-cloud{margin:4px 0 8px;display:flex;flex-wrap:wrap}
 .sidebar-footer{margin-top:auto;padding-top:16px;border-top:1px solid #2a2a3e;font-size:11px;color:#555}
 .sidebar-footer a{color:#a78bfa;display:block;padding:6px 0;font-size:12px}
 .sidebar-footer a:hover{color:#c4b5fd}
@@ -154,6 +157,23 @@ def render_sidebar(types_list, active_type="", query="", back_params="", bottom_
     # Records section
     records_html = f'<a href="/" class="nav-btn {ac}">📋 全部笔记 ({rec_count})</a>\n'
 
+    # 获取标签
+    conn = get_db()
+    tag_rows = conn.execute("SELECT tags FROM entries WHERE tags != '[]'").fetchall()
+    conn.close()
+    tag_freq = {}
+    for r in tag_rows:
+        try:
+            for t in json.loads(r["tags"]):
+                tag_freq[t] = tag_freq.get(t, 0) + 1
+        except Exception:
+            pass
+    top_tags = sorted(tag_freq.items(), key=lambda x: -x[1])[:15]
+    tags_html = "".join(
+        f'<a href="/?tag={esc(t)}" class="nav-tag">{esc(t)} ({c})</a>'
+        for t, c in top_tags
+    )
+
     # Lists section
     lists_html = ""
     for t in types_list:
@@ -169,6 +189,10 @@ def render_sidebar(types_list, active_type="", query="", back_params="", bottom_
   <div class="nav-section">
     <div class="nav-section-title">📋 Records · 笔记</div>
     {records_html}
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-title">🏷 标签</div>
+    <div class="tag-cloud">{tags_html}</div>
   </div>
   <div class="nav-section">
     <div class="nav-section-title">📊 Lists · 清单</div>
@@ -479,16 +503,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if path == "/":
                 query = params.get("q", "").strip()
                 active_type = params.get("type", "").strip()
+                tag = params.get("tag", "").strip()
                 types_list = get_extract_types_with_counts()
 
-                if active_type:
+                if tag:
+                    entries = [e for e in list_entries(limit=99999) if tag in (e.get("tags") or [])]
+                elif active_type:
                     entries = get_typed(active_type, limit=99999)
                 elif query:
                     entries = search_entries_ranked(query, limit=99999)
                 else:
                     entries = list_entries(limit=99999)
 
-                html = render_page(entries, query, active_type, types_list)
+                html = render_page(entries, tag or query, active_type, types_list)
                 self._html(html)
 
             elif path == "/list":
