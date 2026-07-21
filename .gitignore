@@ -1,6 +1,4 @@
-data/*
-!data/.gitkeep
-!data/images/.gitkeep
+# Data lives at ~/.markai/ — not inside this repo
 *.ics
 *.db
 *.db-shm
