@@ -101,6 +101,7 @@ def render_detail_page(entry, back_q, back_type):
             tags_raw = json.loads(tags_raw)
         except (json.JSONDecodeError, TypeError):
             tags_raw = []
+    st_html = f'<span class="st">{esc(st)}</span>' if st else ""
     tags_html = "".join(f'<span class="tag">{esc(t)}</span>' for t in tags_raw)
 
     # Structured data
