@@ -12,16 +12,30 @@ INDEX = """<!DOCTYPE html><html><body>
 <div id="s">Loading...</div>
 <script>
 var r=new XMLHttpRequest();
-r.open('GET','/api/list?limit=99999',true);
+r.open('GET','/api/stats',true);
 r.onload=function(){
-  var d=r.responseText;
-  document.getElementById('s').textContent='Got '+d.length+' bytes, first 200: '+d.substring(0,200);
+  var d=JSON.parse(r.responseText);
+  document.getElementById('s').textContent='Stats OK: '+d.total_entries+' entries, loading list...';
+  var r2=new XMLHttpRequest();
+  r2.open('GET','/api/list?limit=99999',true);
+  r2.onload=function(){
+    var data=JSON.parse(r2.responseText);
+    var entries=data.entries||data;
+    var h='<p>'+entries.length+' entries:</p><ul>';
+    for(var i=0;i<entries.length;i++) h+='<li>'+entries[i].title+'</li>';
+    h+='</ul>';
+    document.getElementById('s').innerHTML=h;
+  };
+  r2.onerror=function(){document.getElementById('s').textContent='List failed'};
+  r2.send();
 };
-r.onerror=function(){document.getElementById('s').textContent='XHR failed'};
+r.onerror=function(){document.getElementById('s').textContent='Stats failed'};
 r.send();
 </script></body></html>"""
 
 class Handler(http.server.BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
     def do_GET(self):
         parts = urllib.parse.urlparse(self.path)
         params = dict(urllib.parse.parse_qsl(parts.query))
@@ -53,20 +67,23 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.json({"error": str(e)}, 500)
 
     def _html(self, html):
+        body = html.encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Connection", "close")
         self.end_headers()
-        self.wfile.write(html.encode())
+        self.wfile.write(body)
 
     def json(self, data, code=200):
         payload = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(payload)))
+        self.send_header("Connection", "close")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(payload)
-        self.wfile.flush()
 
     def log_message(self, *a):
         pass
