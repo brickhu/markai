@@ -99,8 +99,8 @@ When storing, classify the content type so MarkAI can handle it appropriately la
 
 **After storage, structured entries can be queried with:**
 ```bash
-markai typed contact     # All contacts
-markai typed expense     # All expenses
+markai list --subtype contact     # All contacts
+markai list --subtype expense     # All expenses
 markai types             # Show all subtypes in use
 ```
 

@@ -507,7 +507,7 @@ def main():
     args = sys.argv[1:]
     if not args:
         print("MarkAI · 个人 AI 知识库\n用法: markai <command> [args...]", file=sys.stderr)
-        print("命令: save, update, search, check, list, get, delete, calendar, typed, types, stats, export", file=sys.stderr)
+        print("命令: save, update, search, check, list, get, delete, calendar, types, stats, export", file=sys.stderr)
         sys.exit(1)
 
     init_db()
@@ -596,11 +596,19 @@ def main():
 
     elif cmd == "list":
         limit = 20
+        subtype = ""
         if "--limit" in args:
             idx = args.index("--limit")
             if idx + 1 < len(args):
                 limit = int(args[idx + 1])
-        entries = list_entries(limit=limit)
+        if "--subtype" in args:
+            idx = args.index("--subtype")
+            if idx + 1 < len(args):
+                subtype = args[idx + 1]
+        if subtype:
+            entries = get_typed(subtype, limit=limit)
+        else:
+            entries = list_entries(limit=limit)
         print_json(entries)
 
     elif cmd == "get":
@@ -647,20 +655,6 @@ def main():
             sys.exit(1)
         ok = delete_entry(args[1])
         print_json({"deleted": ok, "id": args[1]})
-
-    elif cmd == "typed":
-        if len(args) < 2:
-            print("用法: markai typed <subtype>  例如: markai typed contact", file=sys.stderr)
-            print("       markai types           列出所有类型", file=sys.stderr)
-            sys.exit(1)
-        rows = get_typed(args[1])
-        for r in rows:
-            sd = r.pop("structured_data", {})
-            if isinstance(sd, str):
-                try: sd = json.loads(sd)
-                except: sd = {}
-            r["structured"] = sd
-        print_json(rows)
 
     elif cmd == "types":
         print_json(get_all_types())
