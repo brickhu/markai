@@ -13,6 +13,7 @@ npx skills add brickhu/markai
 - **Store**: Save text, URLs, and images with auto-generated metadata
 - **Search**: FTS5 full-text search with CJK support + tag boost + time-decay ranking
 - **Augment**: Automatically injects relevant knowledge into every conversation
+- **Intent**: Guesses your deeper intent (e.g. birthday coming up → "Need gift ideas?")
 - **Dedup**: Jaccard similarity check before every save
 
 ## Trigger (multilingual)

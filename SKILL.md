@@ -176,10 +176,61 @@ markai search "<keywords>" --ranked --limit 5
 ```
 📚 From your MarkAI:
 - **{title}**: {summary} ({date})
-- **{title}**: {summary} ({date})
 
 Based on the above, {normal answer}...
 ```
+
+### Step 4: Intent Guessing 🎯
+
+After retrieving and answering, look at what the user asked + what you found, then **guess their deeper intent** and proactively offer the next step. Time-sensitive events are the strongest signal.
+
+**Pattern matching rules:**
+
+| Retrieved data | Context clue | Guess | Offer |
+|---------------|-------------|-------|-------|
+| Birthday / date | Today is near that date (≤3 days) | User wants to prepare a gift or greeting | "Only {N} days left! Need gift ideas or a birthday message?" |
+| Birthday / date | Today IS that date | User might have forgotten | "It's today! 🎂 Want me to draft a quick greeting?" |
+| Contact info (phone/email) | No obvious reason | User wants to reach out | "Want me to draft a message to them?" |
+| Deadline / due date | Within this week | User is checking if they're on track | "That's {N} days away. Need help planning?" |
+| How-to / technical note | User is asking a related question | User is solving a problem | "Want me to expand on this or walk through it step by step?" |
+| URL / link saved | Recently stored | User wants to revisit or share | "Want me to open this or summarize it in detail?" |
+| Past decision / preference | User is making a similar decision now | User wants consistency | "Based on your past preference, {suggestion}..." |
+
+**Format:**
+
+```
+{Answer the question directly first}
+
+💡 {Intent guess}: {Proactive offer}
+```
+
+**Example 1 — Birthday:**
+
+```
+User: When is Huxiwen's birthday?
+
+→ Search: 胡昔文生日 is 2019-05-20
+→ Today: 2026-05-19
+
+Reply:
+胡昔文的生日是2019年5月20日。
+
+💡 明天就是她生日了，只有1天！需要我帮你准备生日祝福语或礼物建议吗？
+```
+
+**Example 2 — No time pressure:**
+
+```
+User: When is Huxiwen's birthday?
+
+→ Search: 2019-05-20
+→ Today: 2026-02-10
+
+Reply:
+胡昔文的生日是2019年5月20日（还有3个多月）。
+```
+
+When the date is far away, keep it simple — don't force an intent guess.
 
 ---
 
