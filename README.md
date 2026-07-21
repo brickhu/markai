@@ -2,6 +2,8 @@
 
 > 🇨🇳 [中文版本](README_CN.md)
 
+[![skills.sh](https://skills.sh/b/brickhu/markai)](https://skills.sh/brickhu/markai)
+
 MarkAI is a personal knowledge base that lives inside your AI agent. You tell it things in passing — a birthday, a link, an idea — and it brings them back exactly when you need them, automatically.
 
 ---
