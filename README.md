@@ -10,7 +10,7 @@
 
 [![skills.sh](https://skills.sh/b/brickhu/markai)](https://skills.sh/brickhu/markai)
 
-MarkAI is a personal knowledge base that lives inside your AI agent. You tell it things in passing — a birthday, a link, an idea — and it brings them back exactly when you need them, automatically.
+MarkAI is a skill that gives every agent a shared memory. You tell it things in passing — a birthday, a link, an idea — and they become available to all your agents, automatically.
 
 ---
 
