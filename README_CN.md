@@ -162,7 +162,7 @@ npx skills add brickhu/markai
 | 🇰🇷 한국어 | 기억해，저장해，메모해 |
 | 🌍 Any | 直接说就行，MarkAI 会识别你要存储的意图 |
 
-或输入 `/markai` 查看知识库。<｜end▁of▁thinking｜>
+或输入 `/markai` 查看知识库。
 
 ---
 
