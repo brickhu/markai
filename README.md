@@ -112,7 +112,7 @@ MarkAI: May 21, 2019 — that's in 2 days! 🎂
 
 ```
 You:    Remember: Lily's birthday is May 21 (not 20).
-MarkAI: ✅ MarkAI updated: 胡昔文生日
+MarkAI: ✅ MarkAI updated: Lily's birthday
         📝 Date corrected from May 20 to May 21
 ```
 
