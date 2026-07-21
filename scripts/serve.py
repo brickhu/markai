@@ -20,11 +20,12 @@ r.onload=function(){
   r2.open('GET','/api/list?limit=99999',true);
   r2.onload=function(){
     var data=JSON.parse(r2.responseText);
-    var t=typeof data;
-    var a=Array.isArray(data);
-    var l=data&&data.length!==undefined?data.length:0;
-    document.getElementById('s').textContent='type='+t+' isArray='+a+' len='+l;
+    var entries=data.entries||data;
+    var h='';
+    for(var i=0;i<entries.length;i++) h+='<div style="padding:8px;border:1px solid #ccc;margin:4px;border-radius:4px">'+esc(entries[i].title)+'</div>';
+    document.getElementById('s').innerHTML='<p>'+entries.length+' entries:</p>'+h;
   };
+  function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
   r2.onerror=function(){document.getElementById('s').textContent='List failed'};
   r2.send();
 };
