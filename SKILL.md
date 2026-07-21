@@ -46,7 +46,7 @@ python3 ~/.agents/skills/markai/scripts/brain_cli.py check "<content to store>"
 | Result | Action |
 |--------|--------|
 | `duplicates_found: 0` | Proceed to store |
-| Similarity ≥ 0.5 | User said "remember"/"save"? → auto-update existing entry + notify *"✅ Updated: {title}"*. Without explicit save intent? → warn: *"Similar entry exists ({similarity}%). Keep it as-is?"* |
+| Similarity ≥ 0.5 | User said "remember"/"save"? → auto-update existing entry + notify *"✅ MarkAI updated: {title}"*. Without explicit save intent? → warn: *"Similar entry exists ({similarity}%). Keep it as-is?"* |
 
 ---
 
@@ -140,7 +140,7 @@ User: remember: Bitcoin ETF approved in January 2024
 → Step 6: Store silently
   $ markai save "..." --title "Bitcoin ETF Approval" --tags "..." --summary "..."
 
-→ Reply: ✅ Stored: Bitcoin ETF Approval (ID: abc123)
+→ Reply: ✅ MarkAI stored: Bitcoin ETF Approval (ID: abc123)
 ```
 
 **Branch B — Has gaps / ambiguity → show confirmation:**
@@ -170,7 +170,7 @@ User: remember: Bitcoin ETF approved in January 2024
   $ markai update {existing_id} --title "..." --tags "..." --summary "..."
 
 → Reply:
-  ✅ 已更新已有条目：「比特币ETF获批」（覆盖了之前的版本）
+  ✅ MarkAI 已更新已有条目：「比特币ETF获批」（覆盖了之前的版本）
   📝 标签已丰富，摘要已更新
 ```
 
@@ -246,7 +246,7 @@ If the content mentions data that can be verified or enriched via web search, **
 补充: "截至{date}，比特币价格为{verified_price}美金（用户观察到的是{original}）"
 
 → Store enriched version
-→ Reply: ✅ 已存入并补充了最新数据：比特币当前 ${verified_price}（你观察到的 10万+ 是{timeframe}前的价格）
+→ Reply: ✅ MarkAI 已存入并补充了最新数据：比特币当前 ${verified_price}（你观察到的 10万+ 是{timeframe}前的价格）
 ```
 
 **Example — Combined gaps + duplicate:**
@@ -269,7 +269,7 @@ User: 记住：特币当前价格已经到了10万+
   tags: "比特币,crypto,价格"
 
 → Reply:
-  ✅ 已存入：比特币价格观察
+  ✅ MarkAI 已存入：比特币价格观察
   📊 联网补充：当前比特币 $125,000 USD（你观察到的 10万+ 是近期低点）
 
 ### Scenario 1b: Duplicate Detected
@@ -282,7 +282,7 @@ User: 记住：特币当前价格已经到了10万+
   → Entry updated with new context + merged tags
 
 → Reply:
-  ✅ 已更新：「比特币ETF获批」
+  ✅ MarkAI 已更新：「比特币ETF获批」
   📝 合并了新标签，摘要已刷新
 ```
 
@@ -334,7 +334,7 @@ User: [sends a screenshot of a flight confirmation]
   summary: "8月15日 CA1234 北京飞上海，T3，座位12A"
 
 → Reply:
-  ✅ 已存入：CA1234 北京→上海航班
+  ✅ MarkAI 已存入：CA1234 北京→上海航班
   🖼️ 已提取：航班号、日期、航站楼、座位号、订票编号
 ```
 
@@ -370,7 +370,7 @@ Some agents (or smaller models) cannot see images. In that case:
       --type image \
       --image "{filename}"
 → Reply:
-  📷 图片已保存为 {filename}，但当前模型不支持视觉识别。
+  📷 MarkAI 已保存为 {filename}，但当前模型不支持视觉识别。
   下次用支持图片的 Agent 打开 markai 时，会自动补充内容描述。
 
   💡 提示：你也可以现在用文字告诉我图片里有什么，我来存。
@@ -433,7 +433,7 @@ User: Remember: https://openai.com/index/chatgpt-memory
       --url "https://openai.com/index/chatgpt-memory"
 
 → Reply:
-  ✅ 已存入：ChatGPT Memory Feature
+  ✅ MarkAI stored: ChatGPT Memory Feature
   📄 已抓取全文内容（OpenAI, Feb 2024）
   🔗 来源: https://openai.com/index/chatgpt-memory
 ```
