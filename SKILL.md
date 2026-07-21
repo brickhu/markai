@@ -578,6 +578,7 @@ When the date is far away, keep it simple — don't force an intent guess.
 | User says | Action |
 |-----------|--------|
 | `/markai` / 「查看知识库」 | `markai stats` → show dashboard |
+| `/markai 怎么用` / `/markai help` | Read `~/.agents/skills/markai/README.md` and show core sections (problems, scenarios, install, triggers) |
 | 「update xxx tags to yyy」 | `markai search` → find ID → `markai update --tags "yyy"` |
 | 「delete xxx」 | `markai search` → show matches → confirm → `markai delete` |
 | 「export」 | `markai export --format md` |
