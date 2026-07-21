@@ -21,11 +21,10 @@ r.onload=function(){
   r2.onload=function(){
     var data=JSON.parse(r2.responseText);
     var entries=data.entries||data;
-    var h='';
-    for(var i=0;i<entries.length;i++) h+='<div style="padding:8px;border:1px solid #ccc;margin:4px;border-radius:4px">'+esc(entries[i].title)+'</div>';
-    document.getElementById('s').innerHTML='<p>'+entries.length+' entries:</p>'+h;
+    var txt=entries.length+' entries';
+    for(var i=0;i<entries.length;i++) txt+='\n'+entries[i].title;
+    document.getElementById('s').textContent=txt;
   };
-  function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
   r2.onerror=function(){document.getElementById('s').textContent='List failed'};
   r2.send();
 };
