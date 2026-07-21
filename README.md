@@ -40,6 +40,31 @@ That's it. Save once in any agent. All agents know. No export. No import.
 
 ## 🎯 When to use it
 
+### A complete memory journey — from learning to recall
+
+```
+You (in Kun):    Save this: Lily's favorite flowers are peonies.
+MarkAI:          ✅ MarkAI stored: Lily loves peonies
+                 🏷 Lily · flowers · preference
+
+You (in Kun):    Remember: Lily mentioned she wants a surprise party.
+MarkAI:          ✅ MarkAI stored: Lily wants surprise party
+                 🏷 Lily · party · surprise · wishlist
+
+... two months later, you're in Cursor working on a to-do app ...
+
+You (in Cursor): What do I know about Lily?
+MarkAI:          📚 From your MarkAI:
+                 1. Lily's birthday: May 21, 2019
+                 2. Lily loves peonies 🌸
+                 3. Lily wants a surprise party 🎉
+
+                 💡 Her birthday is in 2 days! Plan:
+                 - Buy peonies ✓
+                 - Surprise party — she said she wanted one!
+                 - Gift ideas? I can help.
+```
+
 ### Save a fact
 
 ```
