@@ -17,12 +17,12 @@ You talk to your AI agent every day. But it forgets everything after each conver
 ## 💡 How it works — 30 seconds
 
 ```
-You:    Remember: Huxiwen's birthday is May 20, 2019.
+You:    Remember: Lily's birthday is May 20, 2019.
 MarkAI: ✅ Stored.
 
 ... 3 months later ...
 
-You:    When is Huxiwen's birthday?
+You:    When is Lily's birthday?
 MarkAI: May 20, 2019 — that's in 2 days! 🎂 Need gift ideas?
 ```
 
