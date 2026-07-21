@@ -510,6 +510,72 @@ If the input looks like standalone knowledge (not a question), ask:
 
 Do NOT auto-store without confirmation.
 
+### Scenario 5: Session recall — "记住本次会话"
+
+**Trigger:** User says `记住本次会话`, `总结存入`, `save this session`, `记录本次对话`
+
+**Goal:** Extract the real value from the conversation so far — not a transcript, but the insights, decisions, and key facts that are worth keeping.
+
+```
+→ Step 1: Review the full conversation
+  Scan all prior turns. Identify:
+  - Decisions made (e.g. "We decided to go with Option B")
+  - Key facts surfaced (e.g. "The API limit is 1000 req/min")
+  - Insights generated (e.g. "The bottleneck is not the model, it's the prompt")
+  - Action items / TODOs
+  - Corrections / updates to existing knowledge
+
+→ Step 2: Filter — what is actually "knowledge"?
+  ❌ Skip: chit-chat, small talk, meandering, repetitive questions
+  ❌ Skip: things the user already knows from this same conversation
+  ✅ Keep: non-obvious facts, decisions, arguments, reference data
+
+→ Step 3: Summarize into 1-3 entries
+  Each entry must be:
+  - Self-contained (makes sense without reading the full conversation)
+  - Tagged properly
+  - Actionable (user can search for it later and get value)
+
+→ Step 4: Show preview and confirm
+  ```
+  📋 本次会话可沉淀的知识（共 {N} 条）：
+
+  1. 标题: {title}
+     标签: {tags}
+     摘要: {summary}
+
+  2. 标题: {title}
+     标签: {tags}
+     摘要: {summary}
+
+  全部存入 / ❌ 修改 / ❌ 取消
+  ```
+
+→ Step 5: Store confirmed entries one by one
+  → Reply: ✅ MarkAI 已存入 {N} 条知识
+```
+
+**Example:**
+
+```
+你: 记住本次会话
+
+→ Review: talked about Kimi CEO, AI lab importance, markai improvements,
+          synthesis rules, knowledge classification...
+
+→ Filter:
+  ✅ Keep: Kimi CEO said "组织比模型更重要"
+  ✅ Keep: 知识分类体系（knowledge/reminder/person/note）值得保留
+  ❌ Skip: 关于 README 格式的反复调整
+
+→ Preview:
+  1. Kimi CEO论AI竞争 — 组织人 > 模型
+  2. 知识分类体系 — 四种记忆类型的区分标准
+
+→ 你: 全部存入
+
+→ ✅ MarkAI 已存入 2 条知识
+
 ---
 
 ## Conversation Augmentation Workflow
