@@ -28,10 +28,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 # ── 路径配置 ────────────────────────────────────────────
-BRAIN_DIR = Path(os.path.expanduser("~/.agents/skills/markai/data"))
-DB_PATH = BRAIN_DIR / "brain.db"
-IMAGES_DIR = BRAIN_DIR / "images"
-BRAIN_DIR.mkdir(parents=True, exist_ok=True)
+MARKAI_HOME = Path(os.path.expanduser("~/.markai"))
+DB_PATH = MARKAI_HOME / "brain.db"
+IMAGES_DIR = MARKAI_HOME / "images"
+MARKAI_HOME.mkdir(parents=True, exist_ok=True)
 IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -392,7 +392,7 @@ def generate_ics(entry_id: str) -> dict:
     ]
 
     # 写入文件
-    ics_path = BRAIN_DIR / f"{entry_id}.ics"
+    ics_path = MARKAI_HOME / f"{entry_id}.ics"
     ics_path.write_text("\r\n".join(ics) + "\r\n", encoding="utf-8")
 
     return {

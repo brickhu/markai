@@ -4,7 +4,7 @@
 
 # MarkAI — One Brain for Every Agent
 
-> *Capture every spark in every agent. AI that knows you.*
+> *Capture sparks in every agent. AI that knows you.*
 
 > 🇨🇳 [中文版本](README_CN.md)
 

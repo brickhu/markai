@@ -2,9 +2,9 @@
   <img src="logo.svg" width="120" height="120" alt="MarkAI">
 </p>
 
-# MarkAI — 每个 Agent 共享一个大脑
+# MarkAI — 每个 Agent 都共享一个大脑
 
-> *Capture every spark in every agent. AI that knows you.*
+> *Capture sparks in every agent. AI that knows you.*
 
 > 🇬🇧 [English version](README.md)
 
