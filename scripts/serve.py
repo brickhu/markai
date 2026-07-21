@@ -31,7 +31,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             elif path == "/api/list":
                 page = int(params.get("page", 1))
                 limit = int(params.get("limit", 99999))
-                self.json(list_entries(limit=limit, offset=(page-1)*limit))
+                raw = list_entries(limit=limit, offset=(page-1)*limit)
+                # strip structured_data to keep JSON parseable in browser
+                for e in raw:
+                    e.pop("structured_data", None)
+                self.json(raw)
             elif path == "/api/search":
                 self.json(search_entries_ranked(params.get("q", ""), limit=99999))
             elif path == "/api/get":
