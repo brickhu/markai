@@ -8,157 +8,129 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0f0f1a;color:#e0e0e0;padding:20px;max-width:960px;margin:0 auto}
 h1{font-size:24px;margin-bottom:20px;color:#a78bfa}
-.filters{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
-.filters button{padding:6px 14px;border:1px solid #2a2a3e;border-radius:16px;background:transparent;color:#a78bfa;cursor:pointer;font-size:13px}
-.filters button.active,.filters button:hover{background:#7c3aed22;border-color:#7c3aed}
-.search-box{display:flex;gap:10px;margin-bottom:20px}
-.search-box input{flex:1;padding:12px 16px;border:1px solid #2a2a3e;border-radius:8px;background:#1a1a2e;color:#e0e0e0;font-size:16px;outline:none}
-.search-box input:focus{border-color:#7c3aed}
-.search-box button{padding:12px 24px;background:#7c3aed;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:16px}
-.stats{color:#888;font-size:13px;margin-bottom:16px}
-.entry{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:10px;padding:16px;margin-bottom:12px;cursor:pointer}
-.entry:hover{border-color:#7c3aed}
-.entry .title{font-size:16px;font-weight:600;margin-bottom:6px}
-.entry .summary{font-size:14px;color:#aaa;line-height:1.5}
+.bar{display:flex;gap:10px;margin-bottom:20px}
+.bar input{flex:1;padding:12px;border:1px solid #2a2a3e;border-radius:8px;background:#1a1a2e;color:#e0e0e0;font-size:16px;outline:none}
+.bar input:focus{border-color:#7c3aed}
+.bar button{padding:12px 24px;background:#7c3aed;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:16px}
+.ft{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.ft button{padding:6px 14px;border:1px solid #2a2a3e;border-radius:16px;background:transparent;color:#a78bfa;cursor:pointer;font-size:13px}
+.ft button.sel,.ft button:hover{background:#7c3aed22;border-color:#7c3aed}
+.s{color:#888;font-size:13px;margin-bottom:16px}
+.c{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:10px;padding:16px;margin-bottom:12px;cursor:pointer}
+.c:hover{border-color:#7c3aed}
+.t{font-size:16px;font-weight:600;margin-bottom:6px}
+.d{font-size:14px;color:#aaa;line-height:1.5}
 .tag{display:inline-block;padding:2px 8px;background:#2a2a3e;border-radius:10px;font-size:11px;color:#a78bfa;margin:2px}
-.subtype{display:inline-block;padding:2px 8px;background:#7c3aed22;border-radius:10px;font-size:11px;color:#7c3aed;margin:2px}
-#more{text-align:center;padding:16px;color:#888;cursor:pointer;display:none}
-#more:hover{color:#a78bfa}
-.modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#000000aa;z-index:100}
-.modal.show{display:flex;align-items:center;justify-content:center}
-.modal-content{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:12px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto}
-.modal-content h2{color:#a78bfa;margin-bottom:12px;font-size:20px}
-.modal-content .field{margin-bottom:10px}
-.modal-content .field-label{font-size:12px;color:#666;margin-bottom:2px}
-.modal-content .field-value{font-size:15px;color:#e0e0e0;word-break:break-all}
-.close-btn{float:right;background:none;border:none;color:#888;font-size:24px;cursor:pointer}
+.st{display:inline-block;padding:2px 8px;background:#7c3aed22;border-radius:10px;font-size:11px;color:#7c3aed;margin:2px}
+.lm{text-align:center;padding:16px;color:#888;cursor:pointer}
+.lm:hover{color:#a78bfa}
+.modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#000000aa;z-index:100;align-items:center;justify-content:center}
+.modal.show{display:flex}
+.mc{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:12px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto}
+.mc h2{color:#a78bfa;margin-bottom:12px;font-size:18px}
+.fi{margin-bottom:10px}
+.fl{font-size:12px;color:#666;margin-bottom:2px}
+.fv{font-size:15px;color:#e0e0e0;word-break:break-all}
+.x{float:right;background:none;border:none;color:#888;font-size:22px;cursor:pointer}
+.x:hover{color:#fff}
 </style>
 </head>
 <body>
-<h1>📌 MarkAI</h1>
-<div class="filters" id="filters">
-  <button class="active" onclick="loadAll()">全部</button>
+<h1>MarkAI</h1>
+<div class="ft" id="ft"><button class="sel" onclick="reset()">全部</button></div>
+<div class="bar">
+<input id="q" placeholder="搜索..." onkeydown="if(event.key==='Enter')dosearch()">
+<button onclick="dosearch()">搜索</button>
 </div>
-<div class="search-box">
-  <input id="q" placeholder="搜索..." onkeydown="if(event.key==='Enter')doSearch()">
-  <button onclick="doSearch()">搜索</button>
-</div>
-<div id="stats" class="stats"></div>
-<div id="entries"></div>
-<div id="more" onclick="loadMore()">加载更多 ↓</div>
-<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
-  <div class="modal-content" id="modalContent"></div>
-</div>
+<div class="s" id="stats"></div>
+<div id="list"></div>
+<div class="lm" id="lm" onclick="more()">加载更多</div>
+<div class="modal" id="modal" onclick="if(event.target==this)hide()"><div class="mc" id="mc"></div></div>
+
 <script>
-var allEntries = [];
-var displayedCount = 0;
-var pageSize = 20;
-var currentType = '';
+var items=[], shown=0, mode='', q='';
 
-function api(u) { return fetch(u).then(function(r){return r.json()}); }
+function api(u){return fetch(u).then(function(r){return r.json()})}
+function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
 
-function loadAll() {
-    currentType = '';
-    document.getElementById('q').value = '';
-    document.getElementById('stats').textContent = '加载中...';
-    api('/api/list?limit=99999').then(function(d){
-        allEntries = d.entries || d;
-        displayedCount = 0;
-        document.getElementById('entries').innerHTML = '';
-        loadMore();
+function reset(){
+  mode='all';q='';document.getElementById('q').value='';
+  api('/api/list?limit=99999').then(function(d){
+    items=d.entries||d;shown=0;document.getElementById('list').innerHTML='';more();
+  });
+}
+
+function loadtype(t){
+  mode='type';q='';document.getElementById('q').value='';
+  api('/api/typed?subtype='+t+'&limit=99999').then(function(d){
+    items=d.entries||d;shown=0;document.getElementById('list').innerHTML='';more();
+  });
+}
+
+function dosearch(){
+  var v=document.getElementById('q').value.trim();
+  if(!v)return reset();mode='search';q=v;
+  api('/api/search?q='+encodeURIComponent(v)+'&limit=99999').then(function(d){
+    items=d.entries||d;shown=0;document.getElementById('list').innerHTML='';more();
+  });
+}
+
+function more(){
+  var nxt=Math.min(shown+20,items.length),html='';
+  for(var i=shown;i<nxt;i++){
+    var e=items[i];
+    html+='<div class="c" data-i="'+i+'"><div class="t">'+esc(e.title)+'</div>';
+    if(e.content_subtype)html+='<span class="st">'+esc(e.content_subtype)+'</span>';
+    if(e.tags)for(var j=0;j<e.tags.length;j++)html+='<span class="tag">'+esc(e.tags[j])+'</span>';
+    if(e.summary)html+='<div class="d">'+esc(e.summary)+'</div>';
+    html+='</div>';
+  }
+  document.getElementById('list').innerHTML+=html;
+  shown=nxt;
+  document.getElementById('stats').textContent='共 '+items.length+' 条';
+  document.getElementById('lm').style.display=(shown<items.length)?'block':'none';
+}
+
+// Event delegation - click on #list
+document.getElementById('list').onclick=function(ev){
+  var el=ev.target;
+  while(el&&!el.classList.contains('c'))el=el.parentNode;
+  if(!el||!el.dataset||!el.dataset.i)return;
+  var idx=parseInt(el.dataset.i);
+  if(idx>=0&&idx<items.length){
+    var e=items[idx];
+    api('/api/get?id='+e.id).then(function(e){
+      if(!e||e.error)return;
+      var mc=document.getElementById('mc'),h='<button class="x" onclick="hide()">x</button><h2>'+esc(e.title)+'</h2>';
+      if(e.content_subtype)h+='<div class="fi"><div class="fl">类型</div><div class="fv">'+esc(e.content_subtype)+'</div></div>';
+      if(e.tags&&e.tags.length){var th='';for(var i=0;i<e.tags.length;i++)th+='<span class="tag">'+esc(e.tags[i])+'</span>';h+='<div class="fi"><div class="fl">标签</div><div class="fv">'+th+'</div></div>'}
+      if(e.summary)h+='<div class="fi"><div class="fl">摘要</div><div class="fv">'+esc(e.summary)+'</div></div>';
+      h+='<div class="fi"><div class="fl">内容</div><div class="fv">'+esc(e.content||'')+'</div></div>';
+      if(e.source_url)h+='<div class="fi"><div class="fl">来源</div><div><a href="'+esc(e.source_url)+'" target="_blank" style="color:#60a5fa">'+esc(e.source_url)+'</a></div></div>';
+      h+='<div class="fi" style="margin-top:12px;color:#555;font-size:12px">'+esc(e.id)+' | '+esc((e.created_at||'').slice(0,10))+'</div>';
+      mc.innerHTML=h;document.getElementById('modal').classList.add('show');
     });
-}
+  }
+};
 
-function loadType(t) {
-    currentType = t;
-    document.getElementById('q').value = '';
-    api('/api/typed?subtype=' + t + '&limit=99999').then(function(d){
-        allEntries = d.entries || d;
-        displayedCount = 0;
-        document.getElementById('entries').innerHTML = '';
-        loadMore();
-    });
-}
+function hide(){document.getElementById('modal').classList.remove('show')}
 
-function doSearch() {
-    var q = document.getElementById('q').value.trim();
-    if (!q) return loadAll();
-    currentType = '';
-    api('/api/search?q=' + encodeURIComponent(q) + '&limit=99999').then(function(d){
-        allEntries = d.entries || d;
-        displayedCount = 0;
-        document.getElementById('entries').innerHTML = '';
-        loadMore();
-    });
-}
-
-function loadMore() {
-    var next = Math.min(displayedCount + pageSize, allEntries.length);
-    var html = '';
-    for (var i = displayedCount; i < next; i++) {
-        var e = allEntries[i];
-        html += '<div class="entry" onclick="showDetail(\'' + e.id + '\')">';
-        html += '<div class="title">' + esc(e.title) + '</div>';
-        if (e.content_subtype) html += '<span class="subtype">' + esc(e.content_subtype) + '</span> ';
-        if (e.tags) for (var j = 0; j < e.tags.length; j++) html += '<span class="tag">' + esc(e.tags[j]) + '</span>';
-        if (e.summary) html += '<div class="summary">' + esc(e.summary) + '</div>';
-        html += '</div>';
-    }
-    document.getElementById('entries').innerHTML += html;
-    displayedCount = next;
-    document.getElementById('stats').textContent = '共 ' + allEntries.length + ' 条  · 已显示 ' + displayedCount + ' 条';
-    document.getElementById('more').style.display = (displayedCount < allEntries.length) ? 'block' : 'none';
-}
-
-function initFilters() {
-    api('/api/types').then(function(types){
-        var f = document.getElementById('filters');
-        for (var i = 0; i < types.length; i++) {
-            (function(t){
-                var b = document.createElement('button');
-                b.textContent = t.subtype + ' (' + t.count + ')';
-                b.onclick = function(){
-                    document.querySelectorAll('#filters button').forEach(function(x){x.classList.remove('active')});
-                    b.classList.add('active');
-                    loadType(t.subtype);
-                };
-                f.appendChild(b);
-            })(types[i]);
-        }
-        loadAll();
-    });
-}
-
-function showDetail(id) {
-    api('/api/get?id=' + id).then(function(e){
-        if (!e || e.error) return;
-        var m = document.getElementById('modalContent');
-        var hh = '<button class="close-btn" onclick="closeModal()">×</button><h2>' + esc(e.title) + '</h2>';
-        if (e.content_subtype) hh += '<div class="field"><div class="field-label">类型</div><div class="field-value">' + esc(e.content_subtype) + '</div></div>';
-        if (e.tags && e.tags.length) {
-            var th = '';
-            for (var i = 0; i < e.tags.length; i++) th += '<span class="tag">' + esc(e.tags[i]) + '</span>';
-            hh += '<div class="field"><div class="field-label">标签</div><div class="field-value">' + th + '</div></div>';
-        }
-        if (e.summary) hh += '<div class="field"><div class="field-label">摘要</div><div class="field-value">' + esc(e.summary) + '</div></div>';
-        hh += '<div class="field"><div class="field-label">内容</div><div class="field-value" style="color:#aaa">' + esc(e.content || '') + '</div></div>';
-        if (e.source_url) hh += '<div class="field"><div class="field-label">来源</div><div><a href="' + esc(e.source_url) + '" style="color:#60a5fa" target="_blank">' + esc(e.source_url) + '</a></div></div>';
-        hh += '<div class="field" style="margin-top:12px;color:#555;font-size:12px">🆔 ' + esc(e.id) + ' · 📅 ' + esc((e.created_at||'').slice(0,10)) + '</div>';
-        m.innerHTML = hh;
-        document.getElementById('modal').classList.add('show');
-    });
-}
-
-function closeModal() { document.getElementById('modal').classList.remove('show'); }
-
-function esc(s) {
-    if (!s) return '';
-    var d = document.createElement('div');
-    d.textContent = s;
-    return d.innerHTML;
-}
-
-initFilters();
+// Init: build filter buttons and load
+api('/api/types').then(function(types){
+  var ft=document.getElementById('ft');
+  for(var i=0;i<types.length;i++){
+    (function(t){
+      var b=document.createElement('button');
+      b.textContent=t.subtype+'('+t.count+')';
+      b.onclick=function(){
+        document.querySelectorAll('#ft button').forEach(function(x){x.classList.remove('sel')});
+        b.classList.add('sel');loadtype(t.subtype);
+      };
+      ft.appendChild(b);
+    })(types[i]);
+  }
+  reset();
+});
 </script>
 </body>
 </html>
