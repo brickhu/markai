@@ -15,8 +15,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
         try:
             if path == "/":
                 self.serve("static/index.html", "text/html; charset=utf-8")
-            elif path.endswith(".html"):
-                self.serve("static" + path, "text/html; charset=utf-8")
+            elif path == "/debug":
+                self._html("""<!DOCTYPE html><html><body>
+<h2>MarkAI Debug</h2>
+<div id="s">Loading...</div>
+<script>
+var s = document.getElementById('s');
+fetch('/api/stats').then(function(r){return r.json()}).then(function(d){
+  s.innerHTML = 'OK: ' + d.total_entries + ' entries stored';
+}).catch(function(e){
+  s.innerHTML = 'FAIL: ' + JSON.stringify(e);
+  console.error(e);
+});
+</script></body></html>""")
             elif path == "/favicon.ico":
                 self.serve("static/favicon.ico", "image/x-icon")
             elif path == "/api/list":
@@ -50,6 +61,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(full.read_bytes())
 
+    def _html(self, html):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(html.encode())
+
     def json(self, data, code=200):
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -68,6 +85,7 @@ def main():
     init_db()
     httpd = http.server.HTTPServer((HOST, a.port), Handler)
     print(f"MarkAI → http://{HOST}:{a.port}")
+    print(f"Debug  → http://{HOST}:{a.port}/debug")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
