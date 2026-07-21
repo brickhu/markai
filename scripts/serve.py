@@ -6,7 +6,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from brain_cli import init_db, list_entries, search_entries_ranked, get_entry, get_typed, get_all_types, get_stats
 
 HOST = "127.0.0.1"
-PORT = 8888
 
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
@@ -16,6 +15,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         try:
             if path == "/":
                 self.serve("static/index.html", "text/html; charset=utf-8")
+            elif path.endswith(".html"):
+                self.serve("static" + path, "text/html; charset=utf-8")
             elif path == "/favicon.ico":
                 self.serve("static/favicon.ico", "image/x-icon")
             elif path == "/api/list":
@@ -36,6 +37,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             else:
                 self.json({"error": "not found"}, 404)
         except Exception as e:
+            import traceback; traceback.print_exc()
             self.json({"error": str(e)}, 500)
 
     def serve(self, relpath, mime):
@@ -59,15 +61,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
         pass
 
 def main():
-    global PORT
     import argparse
     p = argparse.ArgumentParser()
     p.add_argument("--port", type=int, default=8888)
     a = p.parse_args()
-    PORT = a.port
     init_db()
-    httpd = http.server.HTTPServer((HOST, PORT), Handler)
-    print(f"MarkAI → http://{HOST}:{PORT}")
+    httpd = http.server.HTTPServer((HOST, a.port), Handler)
+    print(f"MarkAI → http://{HOST}:{a.port}")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

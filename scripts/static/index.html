@@ -1,134 +1,58 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MarkAI</title>
+<html>
+<head><meta charset="utf-8"><title>MarkAI</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0f0f1a;color:#e0e0e0;padding:20px;max-width:960px;margin:0 auto}
-h1{font-size:24px;margin-bottom:20px;color:#a78bfa}
-.bar{display:flex;gap:10px;margin-bottom:20px}
-.bar input{flex:1;padding:12px 16px;border:1px solid #2a2a3e;border-radius:8px;background:#1a1a2e;color:#e0e0e0;font-size:16px;outline:none}
-.bar input:focus{border-color:#7c3aed}
-.bar button{padding:12px 24px;background:#7c3aed;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:16px}
-.ft{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
-.ft button{padding:6px 14px;border:1px solid #2a2a3e;border-radius:16px;background:transparent;color:#a78bfa;cursor:pointer;font-size:13px}
-.ft button.sel,.ft button:hover{background:#7c3aed22;border-color:#7c3aed}
-.s{color:#888;font-size:13px;margin-bottom:16px}
-.c{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:10px;padding:16px;margin-bottom:12px;cursor:pointer}
-.c:hover{border-color:#7c3aed}
-.t{font-size:16px;font-weight:600;margin-bottom:6px}
-.d{font-size:14px;color:#aaa}
-.tag{display:inline-block;padding:2px 8px;background:#2a2a3e;border-radius:10px;font-size:11px;color:#a78bfa;margin:2px}
-.stt{display:inline-block;padding:2px 8px;background:#7c3aed22;border-radius:10px;font-size:11px;color:#7c3aed;margin:2px}
-.lm{text-align:center;padding:16px;color:#888;cursor:pointer}
-.lm:hover{color:#a78bfa}
-.modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#000000aa;z-index:100;align-items:center;justify-content:center}
-.modal.show{display:flex;}
-.mc{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:12px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto}
-.mc h2{color:#a78bfa;margin-bottom:12px;font-size:18px}
-.fi{margin-bottom:10px}
-.fl{font-size:12px;color:#666;margin-bottom:2px}
-.fv{font-size:15px;color:#e0e0e0;word-break:break-all}
+body{font-family:sans-serif;background:#111;color:#ddd;padding:20px;max-width:800px;margin:0 auto}
+h1{color:#a78bfa}
+.bar{display:flex;gap:10px;margin:16px 0}
+.bar input{flex:1;padding:10px;border:1px solid #333;border-radius:6px;background:#1a1a2e;color:#ddd;font-size:15px}
+.bar button{padding:10px 20px;background:#7c3aed;color:#fff;border:none;border-radius:6px;cursor:pointer}
+.st{color:#888;margin-bottom:16px}
+.entry{background:#1a1a2e;border:1px solid #333;border-radius:8px;padding:14px;margin-bottom:10px;cursor:pointer}
+.entry:hover{border-color:#7c3aed}
+.t{font-size:16px;font-weight:600;margin-bottom:4px}
+.d{font-size:14px;color:#aaa;margin:-bottom:4px}
+.tag{display:inline-block;background:#333;border-radius:8px;padding:2px 8px;font-size:11px;color:#a78bfa;margin:2px}
+.lm{text-align:center;padding:12px;color:#888;cursor:pointer}
+.md{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center}
+.md.s{display:flex}
+.mc{background:#1a1a2e;border:1px solid #333;border-radius:12px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto}
+.mc h2{color:#a78bfa;margin-bottom:12px}
+.f{margin-bottom:10px}
+.fl{font-size:12px;color:#666}
+.fv{font-size:15px;color:#ddd;word-break:break-all}
 .x{float:right;background:none;border:none;color:#888;font-size:22px;cursor:pointer}
-.x:hover{color:#fff}
+#ft{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+#ft button{padding:4px 12px;border:1px solid #333;border-radius:12px;background:transparent;color:#a78bfa;cursor:pointer;font-size:12px}
+#ft button.s{border-color:#7c3aed;background:#7c3aed22}
 </style></head>
 <body>
 <h1>MarkAI</h1>
-<div class="ft" id="ft">
-  <button class="sel" onclick="reset()">全部</button>
-</div>
-<div class="bar">
-  <input id="q" placeholder="搜索..." onkeydown="if(event.key==='Enter')search()">
-  <button onclick="search()">搜索</button>
-</div>
-<div class="s" id="s"></div>
+<div id="ft"><button class="s" onclick="home()">全部</button></div>
+<div class="bar"><input id="q" placeholder="搜索..." onkeydown="if(event.key==='Enter')fq()"><button onclick="fq()">搜索</button></div>
+<div class="st" id="st"></div>
 <div id="list"></div>
 <div class="lm" id="lm" onclick="more()">加载更多</div>
-<div class="modal" id="modal" onclick="if(event.target==this)hide()"><div class="mc" id="mc"></div></div>
+<div class="md" id="md" onclick="if(event.target==this)hm()"><div class="mc" id="mc"></div></div>
 <script>
 var A=[],N=0;
+function $(id){return document.getElementById(id)}
+function esc(s){if(!s)return '';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function home(){$('q').value='';$('list').innerHTML='<p style="padding:20px;text-align:center;color:#888">loading...</p>';fetch('/api/list?limit=99999').then(function(r){return r.json()}).then(function(d){A=d.entries||d;N=0;$('list').innerHTML='';more()}).catch(function(e){$('st').textContent='Err: '+JSON.stringify(e)})}
+function ft(t){fetch('/api/typed?subtype='+t+'&limit=99999').then(function(r){return r.json()}).then(function(d){A=d.entries||d;N=0;$('list').innerHTML='';more()}).catch(function(e){$('st').textContent='Err: '+JSON.stringify(e)})}
+function fq(){var v=$('q').value.trim();if(!v)return home();$('list').innerHTML='<p style="padding:20px;text-align:center;color:#888">loading...</p>';fetch('/api/search?q='+encodeURIComponent(v)+'&limit=99999').then(function(r){return r.json()}).then(function(d){A=d.entries||d;N=0;$('list').innerHTML='';more()}).catch(function(e){$('st').textContent='Err: '+JSON.stringify(e)})}
+function more(){var nx=Math.min(N+20,A.length),h='';for(var i=N;i<nx;i++){var e=A[i];if(!e)continue;h+='<div class="entry" data-id="'+e.id+'"><div class="t">'+esc(e.title)+'</div>';if(e.content_subtype)h+='<span class="tag" style="color:#7c3aed">'+esc(e.content_subtype)+'</span>';if(e.tags)for(var j=0;j<e.tags.length;j++)h+='<span class="tag">'+esc(e.tags[j])+'</span>';if(e.summary)h+='<div class="d">'+esc(e.summary)+'</div>';h+='</div>'}if(h){$('list').innerHTML+=h;N=nx;$('st').textContent=A.length+' entries, showing '+N;$('lm').style.display=(N<A.length)?'block':'none'}}
+function vd(id){fetch('/api/get?id='+id).then(function(r){return r.json()}).then(function(e){if(!e||e.error)return;var h='<button class="x" onclick="hm()">x</button><h2>'+esc(e.title)+'</h2>';if(e.content_subtype)h+='<div class="f"><div class="fl">Type</div><div class="fv">'+esc(e.content_subtype)+'</div></div>';if(e.tags&&e.tags.length){h+='<div class="f"><div class="fl">Tags</div><div class="fv">';for(var i=0;i<e.tags.length;i++)h+='<span class="tag">'+esc(e.tags[i])+'</span>';h+='</div></div>'}if(e.summary)h+='<div class="f"><div class="fl">Summary</div><div class="fv">'+esc(e.summary)+'</div></div>';h+='<div class="f"><div class="fl">Content</div><div class="fv">'+esc(e.content||'')+'</div></div>';$('mc').innerHTML=h;$('md').classList.add('s')}).catch(function(e){$('st').textContent='Err: '+JSON.stringify(e)})}
+function hm(){$('md').classList.remove('s')}
 
-function api(u){return fetch(u).then(function(r){return r.json()})}
-function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
-
-function reset(){
-  st('加载中...');
-  api('/api/list?limit=99999').then(function(d){
-    A=d.entries||d;N=0;document.getElementById('list').innerHTML='';more();
-  }).catch(function(e){st('错误: '+e)});
-}
-
-function loadtype(t){
-  st('加载中...');
-  api('/api/typed?subtype='+t+'&limit=99999').then(function(d){
-    A=d.entries||d;N=0;document.getElementById('list').innerHTML='';more();
-  }).catch(function(e){st('错误: '+e)});
-}
-
-function search(){
-  var v=document.getElementById('q').value.trim();
-  if(!v)return reset();
-  st('搜索中...');
-  api('/api/search?q='+encodeURIComponent(v)+'&limit=99999').then(function(d){
-    A=d.entries||d;N=0;document.getElementById('list').innerHTML='';more();
-  }).catch(function(e){st('错误: '+e)});
-}
-
-function more(){
-  var nx=Math.min(N+20,A.length),h='';
-  for(var i=N;i<nx;i++){
-    var e=A[i];
-    h+='<div class="c" data-i="'+i+'"><div class="t">'+esc(e.title)+'</div>';
-    if(e.content_subtype)h+='<span class="stt">'+esc(e.content_subtype)+'</span>';
-    if(e.tags)for(var j=0;j<e.tags.length;j++)h+='<span class="tag">'+esc(e.tags[j])+'</span>';
-    if(e.summary)h+='<div class="d">'+esc(e.summary)+'</div>';
-    h+='</div>';
-  }
-  document.getElementById('list').innerHTML+=h;
-  N=nx;
-  st('共 '+A.length+' 条，已显示 '+N+' 条');
-  document.getElementById('lm').style.display=(N<A.length)?'block':'none';
-}
-
-function st(t){document.getElementById('s').textContent=t}
-
-// 点击条目 → 查看详情（事件代理）
-document.getElementById('list').onclick=function(ev){
+// Event delegation for entry clicks
+$('list').addEventListener('click',function(ev){
   var el=ev.target;
-  while(el&&!el.classList.contains('c'))el=el.parentNode;
-  if(!el||!el.dataset||el.dataset.i===undefined)return;
-  var idx=parseInt(el.dataset.i),e=A[idx];
-  if(!e)return;
-  api('/api/get?id='+e.id).then(function(e2){
-    if(!e2||e2.error){st('获取失败');return}
-    var mc=document.getElementById('mc'),h='<button class="x" onclick="hide()">x</button><h2>'+esc(e2.title)+'</h2>';
-    if(e2.content_subtype)h+='<div class="fi"><div class="fl">类型</div><div class="fv">'+esc(e2.content_subtype)+'</div></div>';
-    if(e2.tags&&e2.tags.length){var th='';for(var i=0;i<e2.tags.length;i++)th+='<span class="tag">'+esc(e2.tags[i])+'</span>';h+='<div class="fi"><div class="fl">标签</div><div class="fv">'+th+'</div></div>'}
-    if(e2.summary)h+='<div class="fi"><div class="fl">摘要</div><div class="fv">'+esc(e2.summary)+'</div></div>';
-    h+='<div class="fi"><div class="fl">内容</div><div class="fv">'+esc(e2.content||'')+'</div></div>';
-    if(e2.source_url)h+='<div class="fi"><div class="fl">来源</div><div><a href="'+esc(e2.source_url)+'" target="_blank" style="color:#60a5fa">'+esc(e2.source_url)+'</a></div></div>';
-    h+='<div class="fi" style="margin-top:12px;color:#555;font-size:12px">'+esc(e2.id)+' | '+esc((e2.created_at||'').slice(0,10))+'</div>';
-    mc.innerHTML=h;document.getElementById('modal').classList.add('show');
-  }).catch(function(e){st('错误: '+e)});
-};
+  while(el&&el.tagName!=='DIV')el=el.parentNode;
+  if(!el||!el.dataset||!el.dataset.id)return;
+  vd(el.dataset.id);
+});
 
-function hide(){document.getElementById('modal').classList.remove('show')}
-
-// 初始化: 获取类型列表 → 构建筛选按钮 → 加载全部
-api('/api/types').then(function(types){
-  var ft=document.getElementById('ft');
-  for(var i=0;i<types.length;i++){
-    (function(ti){
-      var b=document.createElement('button');
-      b.textContent=ti.subtype+'('+ti.count+')';
-      b.onclick=function(){
-        document.querySelectorAll('#ft button').forEach(function(x){x.classList.remove('sel')});
-        b.classList.add('sel');loadtype(ti.subtype);
-      };
-      ft.appendChild(b);
-    })(types[i]);
-  }
-  reset();
-}).catch(function(e){st('初始化失败: '+e)});
-</script>
-</body>
-</html>
+// Init
+fetch('/api/types').then(function(r){return r.json()}).then(function(t){var f=$('ft');for(var i=0;i<t.length;i++){(function(ti){var b=document.createElement('button');b.textContent=ti.subtype+'('+ti.count+')';b.onclick=function(){var all=document.querySelectorAll('#ft button');for(var j=0;j<all.length;j++)all[j].classList.remove('s');b.classList.add('s');ft(ti.subtype)};f.appendChild(b)})(t[i])}home()}).catch(function(e){$('st').textContent='InitErr: '+JSON.stringify(e)});
+</script></body></html>
