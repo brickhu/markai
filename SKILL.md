@@ -97,6 +97,7 @@ markai list --limit 20          # Recent entries
 markai get <id>                 # Full entry by ID
 markai update <id> --tags "new" --summary "new summary"
 markai delete <id>              # Delete by ID
+markai calendar <id>            # Generate .ics calendar file (import to phone)
 markai stats                    # Dashboard: total, tag cloud, date range, weekly activity
 markai export --format json     # or md
 ```
@@ -132,7 +133,11 @@ User: remember: Bitcoin ETF approved in January 2024
   tags: "Bitcoin,ETF,crypto,regulation"
   summary: "SEC approved spot Bitcoin ETFs in January 2024"
 
-→ Step 5: Store silently
+→ Step 5: Check if date-related → offer calendar
+  → Detected date: "January 2024"
+  → No current action needed (past event)
+
+→ Step 6: Store silently
   $ markai save "..." --title "Bitcoin ETF Approval" --tags "..." --summary "..."
 
 → Reply: ✅ Stored: Bitcoin ETF Approval (ID: abc123)
@@ -169,7 +174,36 @@ User: remember: Bitcoin ETF approved in January 2024
   📝 标签已丰富，摘要已更新
 ```
 
-### ⚡ Information Gap Detection (MANDATORY before storing)
+---
+
+### 📅 Calendar Integration: Push to your phone calendar
+
+When you store something with a **future date** (birthday, deadline, trip, bill), markai can generate an `.ics` file — the universal calendar format.
+
+```bash
+markai calendar <id>
+```
+
+This creates a file at `~/.agents/skills/markai/data/<id>.ics`.
+
+**Two ways to use it:**
+
+1. **Import manually** — double-click the `.ics` file to add to iPhone Calendar, Google Calendar, or Outlook. You'll get push notifications on your phone.
+2. **Agent delivery** — the AI can send the `.ics` file to you via IM or give you a download link.
+
+**When to offer it (AI rule):**
+
+After storing an entry with a detectable future date, ask:
+
+```
+📅 检测到有日期信息：8月
+   要不要生成日历提醒？导入后手机会收到推送通知。
+   ✅ 生成 / ❌ 不用
+```
+
+If the date is past or already handled, skip the offer silently.
+
+---
 
 Before storing ANY entry, scan for these two gap types:
 

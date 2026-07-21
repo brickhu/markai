@@ -23,6 +23,7 @@ import json
 import os
 import sys
 import re
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -330,6 +331,78 @@ def search_entries_ranked(query: str, limit: int = 10) -> list:
     return results[:limit]
 
 
+def generate_ics(entry_id: str) -> dict:
+    """为条目生成 .ics 日历文件。从内容中提取日期信息。"""
+    entry = get_entry(entry_id)
+    if not entry:
+        return {"ok": False, "error": "条目不存在"}
+
+    # 从内容或摘要中尝试提取日期
+    text = entry.get("content", "") + " " + entry.get("summary", "") + " " + entry.get("title", "")
+    # 匹配中文日期格式：2026年8月、8月、2026-08、8月1日
+    date_match = re.search(
+        r'(\d{4}\s*年\s*)?(\d{1,2})\s*月\s*(\d{1,2})?\s*日?', text
+    )
+    if not date_match:
+        date_match = re.search(r'(\d{4})-(\d{2})-(\d{2})', text)
+    if not date_match:
+        return {"ok": False, "error": "未在条目中找到可识别的日期信息"}
+
+    try:
+        if date_match.lastindex == 3 and len(date_match.group(1) or "") > 4:
+            # "2026年8月" or "2026-08" format
+            if date_match.group(1) and '年' in date_match.group(1):
+                year = date_match.group(1).replace('年', '').strip()
+                month = date_match.group(2).zfill(2)
+                day = (date_match.group(3) or "1").zfill(2)
+            else:
+                year = date_match.group(1) or str(datetime.now(timezone.utc).year)
+                month = date_match.group(2).zfill(2)
+                day = (date_match.group(3) or "01").zfill(2)
+        else:
+            # 从当前上下文推断年份
+            year = str(datetime.now(timezone.utc).year)
+            month = date_match.group(2).zfill(2)
+            day = (date_match.group(3) or "01").zfill(2)
+
+        dtstart = f"{year}{month}{day}"
+        # 默认当天结束
+        dtend = f"{year}{month}{str(int(day)+1).zfill(2) if int(day) < 31 else '31'}"
+    except Exception:
+        return {"ok": False, "error": "日期解析失败"}
+
+    # 构建 .ics 内容
+    uid = uuid.uuid4().hex[:16]
+    summary = entry.get("title", "MarkAI Entry")[:75]
+    desc = (entry.get("summary", "") or entry.get("content", "")[:120]).replace("\n", "\\n")[:200]
+
+    ics = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//markai//EN",
+        "CALSCALE:GREGORIAN",
+        "BEGIN:VEVENT",
+        f"UID:{uid}@markai",
+        f"DTSTART;VALUE=DATE:{dtstart}",
+        f"DTEND;VALUE=DATE:{dtend}",
+        f"SUMMARY:{summary}",
+        f"DESCRIPTION:{desc}",
+        "END:VEVENT",
+        "END:VCALENDAR",
+    ]
+
+    # 写入文件
+    ics_path = BRAIN_DIR / f"{entry_id}.ics"
+    ics_path.write_text("\r\n".join(ics) + "\r\n", encoding="utf-8")
+
+    return {
+        "ok": True,
+        "file": str(ics_path),
+        "summary": summary,
+        "date": f"{year}-{month}-{day}",
+    }
+
+
 def get_stats() -> dict:
     conn = get_db()
     total = conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
@@ -396,7 +469,7 @@ def main():
     args = sys.argv[1:]
     if not args:
         print("MarkAI · 个人 AI 知识库\n用法: markai <command> [args...]", file=sys.stderr)
-        print("命令: save, update, search, check, list, get, delete, stats, export", file=sys.stderr)
+        print("命令: save, update, search, check, list, get, delete, calendar, stats, export", file=sys.stderr)
         sys.exit(1)
 
     init_db()
@@ -532,6 +605,16 @@ def main():
             if idx + 1 < len(args):
                 fmt = args[idx + 1]
         print(export_entries(fmt))
+
+    elif cmd == "calendar":
+        if len(args) < 2:
+            print("用法: markai calendar <id>", file=sys.stderr)
+            sys.exit(1)
+        result = generate_ics(args[1])
+        print_json(result)
+        if result.get("ok"):
+            print(f"\n📅 日历文件已生成: {result['file']}", file=sys.stderr)
+            print(f"   导入到 iPhone / Google Calendar / Outlook 即可收到推送通知")
 
     else:
         print(f"未知命令: {cmd}", file=sys.stderr)
