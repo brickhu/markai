@@ -518,6 +518,7 @@ def main():
   calendar   生成日历     markai calendar <id>
   types      类型统计     markai types
   stats      统计         markai stats
+  serve      Web 启动      markai serve --port 8888
   export     导出         markai export [--format json|md]
 
 数据目录: ~/.markai/brain.db
@@ -675,6 +676,16 @@ def main():
 
     elif cmd == "types":
         print_json(get_all_types())
+
+    elif cmd == "serve":
+        import subprocess
+        port = 8888
+        if "--port" in args:
+            idx = args.index("--port")
+            if idx + 1 < len(args):
+                port = int(args[idx + 1])
+        script = Path(__file__).parent / "serve.py"
+        os.execv(sys.executable, ["python3", str(script), "--port", str(port)])
 
     elif cmd == "stats":
         print_json(get_stats())
