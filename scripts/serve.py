@@ -7,31 +7,6 @@ from brain_cli import init_db, list_entries, search_entries_ranked, get_entry, g
 
 HOST = "127.0.0.1"
 
-INDEX = """<!DOCTYPE html><html><body>
-<h2>MarkAI</h2>
-<div id="s">Loading...</div>
-<script>
-var r=new XMLHttpRequest();
-r.open('GET','/api/stats',true);
-r.onload=function(){
-  var d=JSON.parse(r.responseText);
-  document.getElementById('s').textContent='Stats OK: '+d.total_entries+' entries, loading list...';
-  var r2=new XMLHttpRequest();
-  r2.open('GET','/api/list?limit=99999',true);
-  r2.onload=function(){
-    var data=JSON.parse(r2.responseText);
-    var entries=data.entries||data;
-    var txt=entries.length+' entries';
-    for(var i=0;i<entries.length;i++) txt+=String.fromCharCode(10)+entries[i].title;
-    document.getElementById('s').textContent=txt;
-  };
-  r2.onerror=function(){document.getElementById('s').textContent='List failed'};
-  r2.send();
-};
-r.onerror=function(){document.getElementById('s').textContent='Stats failed'};
-r.send();
-</script></body></html>"""
-
 class Handler(http.server.BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
@@ -41,7 +16,36 @@ class Handler(http.server.BaseHTTPRequestHandler):
         path = parts.path
         try:
             if path == "/":
-                self._html(INDEX)
+                # Server-side rendered HTML
+                entries = list_entries(limit=99999)
+                rows = ""
+                for e in entries:
+                    title = e.get("title", "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                    summary = (e.get("summary", "") or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                    st = e.get("content_subtype", "") or ""
+                    tags = json.loads(e.get("tags", "[]")) if isinstance(e.get("tags"), str) else (e.get("tags") or [])
+                    tag_html = "".join(f'<span class="t">{t.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")}</span>' for t in tags)
+                    st_html = f'<span class="st">{st}</span>' if st else ""
+                    summary_html = f'<div class="d">{summary}</div>' if summary else ""
+                    rows += f'<div class="c">{st_html}{tag_html}<div class="t">{title}</div>{summary_html}</div>'
+                html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>MarkAI</title>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{font-family:sans-serif;background:#111;color:#ddd;padding:20px;max-width:800px;margin:0 auto}}
+h1{{color:#a78bfa;font-size:22px;margin-bottom:20px}}
+.c{{background:#1a1a2e;border:1px solid #333;border-radius:8px;padding:12px;margin-bottom:8px}}
+.t{{font-size:15px;font-weight:600;margin-bottom:3px}}
+.d{{font-size:13px;color:#aaa}}
+.st{{display:inline-block;padding:2px 8px;background:#7c3aed22;border-radius:8px;font-size:11px;color:#7c3aed;margin:2px}}
+.t{{display:inline-block;padding:2px 8px;background:#333;border-radius:8px;font-size:11px;color:#a78bfa;margin:2px}}
+.stats{{color:#888;font-size:13px;margin-bottom:16px}}
+</style></head><body>
+<h1>MarkAI</h1>
+<div class="stats">{len(entries)} entries</div>
+{rows}
+</body></html>"""
+                self._html(html)
             elif path == "/api/list":
                 page = int(params.get("page", 1))
                 limit = int(params.get("limit", 99999))
