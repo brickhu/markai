@@ -1,5 +1,5 @@
-data/brain.db
-data/images/*
-!data/images/.gitkeep
+data/*
+!data/.gitkeep
+*.ics
 __pycache__/
 *.pyc
