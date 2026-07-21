@@ -209,11 +209,64 @@ User: 记住：特币当前价格已经到了10万+
 → Reply: ⚠️ Similar entry exists: "Bitcoin ETF Approved" (62%). Store / Merge / Skip?
 ```
 
-### Scenario 2: Image
+### Scenario 2: Image — Deep extraction, not just a caption 🖼️
 
-1. You analyze the image and generate a text description
-2. Copy image to `~/.agents/skills/markai/data/images/`
-3. Store description + image path via `markai save`
+**CRITICAL: Extract EVERY piece of information visible in the image. The description is the only thing that can be searched later.**
+
+When the user sends an image with "remember" or "save this":
+
+```
+User: [sends a screenshot of a flight confirmation]
+     Remember this.
+
+→ Step 1: Deep visual analysis — extract ALL information
+  You (the AI) must identify and record:
+  - 📝 All visible text (OCR, labels, captions, numbers)
+  - 📊 Structured data (tables, charts, prices, dates)
+  - 👤 People, faces, names if visible
+  - 🏷 Objects, brands, logos
+  - 📍 Locations, addresses
+  - 🎨 Colors, layout for context
+
+→ Step 2: Generate a structured description
+  Don't write "A screenshot of a flight ticket."
+  Write:
+  "Flight confirmation: CA1234, Beijing→Shanghai, 2026-08-15 08:30,
+   Terminal 3, Seat 12A, Booking ref: ABC123, Gate B22"
+
+→ Step 3: Copy image to data/images/
+  $ cp /path/to/image.png ~/.agents/skills/markai/data/images/img_20260815.png
+
+→ Step 4: Duplicate check on the description text
+
+→ Step 5: Store
+  title: "CA1234 北京→上海航班"
+  tags: "旅行,航班,北京,上海"
+  summary: "8月15日 CA1234 北京飞上海，T3，座位12A"
+
+→ Reply:
+  ✅ 已存入：CA1234 北京→上海航班
+  🖼️ 已提取：航班号、日期、航站楼、座位号、订票编号
+```
+
+**Extraction checklist by image type:**
+
+| Image type | Must extract |
+|-----------|-------------|
+| Screenshot / UI | All visible text, buttons, URLs, error messages, version numbers |
+| Document / PDF scan | All text (OCR), dates, reference numbers, signatories |
+| Chart / Graph | Data points, axes labels, trend direction, key numbers |
+| Photo with people | Names, context, occasion, location, date if visible |
+| Product / Object | Brand, model, price, specs, condition |
+| Map / Floor plan | Address, landmarks, routes, distances |
+| QR code / Barcode | Decoded content |
+| Meme / Social post | Text, author, platform, context |
+| Whiteboard / Handwritten | All text transcribed |
+
+**If the image is unclear or contains unreadable text:**
+- Note what IS visible
+- Add tag `partial-read`
+- Tell the user: *"⚠️ 图中{某部分}无法识别，已保存能提取的内容"*
 
 ### Scenario 3: URL — Fetch content, not the link 🔗
 
