@@ -38,13 +38,56 @@ That's it. No commands to memorize. No folders to organize. Just talk.
 
 ## 🎯 When to use it
 
-| You say | What happens |
-|---------|-------------|
-| "Remember: Bitcoin ETF approved Jan 2024" | Saves to knowledge base with auto-generated tags and summary |
-| "Save this link: https://..." | Fetches the page, extracts key info, stores it |
-| "Note to self: the API key is sk-xxx" | Stores securely on your machine (not the cloud) |
-| "What was that React 19 release date?" | Searches your knowledge base, answers instantly |
-| [A question about anything] | Automatically checks if you've saved something relevant |
+### Save a fact
+
+```
+You:    Remember: Bitcoin ETF approved in January 2024.
+MarkAI: ✅ MarkAI stored: Bitcoin ETF Approval
+        🏷 Bitcoin · ETF · crypto · regulation
+```
+
+### Save a link (full content fetched, not just URL)
+
+```
+You:    Save this: https://tech.meituan.com/2025/10/10/VSRM.html
+MarkAI: ✅ MarkAI stored: VSRM — Verifiable Step-level Reward Model
+        📄 Full article fetched (Meituan Tech, Oct 2025)
+        🔗 https://tech.meituan.com/2025/10/10/VSRM.html
+```
+
+### Save a screenshot (AI extracts all visible info)
+
+```
+You:    [sends a flight confirmation screenshot]
+        Remember this.
+MarkAI: ✅ MarkAI stored: CA1234 Beijing→Shanghai
+        🖼 Extracted: flight number, date, terminal, seat, booking ref
+```
+
+### Retrieve — automatic, no command needed
+
+```
+You:    When does the car insurance expire?
+MarkAI: 📚 From your MarkAI:
+        Tesla insurance renewal — due in August (about 10 days left)
+        💡 Need me to compare plans?
+```
+
+### Proactive intent guessing
+
+```
+You:    When is Lily's birthday?
+MarkAI: May 21, 2019 — that's in 2 days! 🎂
+        💡 Want gift ideas or a birthday message?
+```
+
+### Update existing info — just say it again
+
+```
+You:    Remember: Lily's birthday is May 21 (not 20).
+MarkAI: ✅ MarkAI updated: 胡昔文生日
+        📝 Date corrected from May 20 to May 21
+```
 
 ---
 
@@ -98,7 +141,7 @@ markai export --format md       # Export everything as Markdown
 ## 📁 Your data, your control
 
 ```
-~/.agents/skills/markai/data/
+~/.markai/
 └── brain.db    ← Everything in one file
 ```
 
