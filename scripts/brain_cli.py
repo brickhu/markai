@@ -614,6 +614,10 @@ def main():
     elif cmd == "list":
         limit = 20
         subtype = ""
+        # markai list types → 列出所有类型
+        if len(args) >= 2 and args[1] == "types":
+            print_json(get_all_types())
+            return
         if "--limit" in args:
             idx = args.index("--limit")
             if idx + 1 < len(args):
