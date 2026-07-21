@@ -225,11 +225,11 @@ def _split_terms(query: str) -> list:
     return [t.strip() for t in raw if len(t.strip()) >= 1]
 
 
-def list_entries(limit: int = 20) -> list:
+def list_entries(limit: int = 20, offset: int = 0) -> list:
     conn = get_db()
     rows = conn.execute(
-        "SELECT * FROM entries ORDER BY updated_at DESC LIMIT ?",
-        (limit,)
+        "SELECT * FROM entries ORDER BY updated_at DESC LIMIT ? OFFSET ?",
+        (limit, offset)
     ).fetchall()
     conn.close()
     return [row_to_dict(r) for r in rows]
@@ -460,15 +460,15 @@ def get_stats() -> dict:
     }
 
 
-def get_typed(subtype: str, limit: int = 50) -> list:
+def get_typed(subtype: str, limit: int = 50, offset: int = 0) -> list:
     """按 content_subtype 查询，格式化展示结构化字段"""
     conn = get_db()
     rows = conn.execute("""
         SELECT * FROM entries
         WHERE content_subtype = ?
         ORDER BY created_at DESC
-        LIMIT ?
-    """, (subtype, limit)).fetchall()
+        LIMIT ? OFFSET ?
+    """, (subtype, limit, offset)).fetchall()
     conn.close()
     return [row_to_dict(r) for r in rows]
 
@@ -512,7 +512,8 @@ def main():
 命令:
   search     搜索         markai search "关键词" [--ranked]
   check      重复检测     markai check "内容"
-  list       列出         markai list [--limit 20] [--subtype contact]
+  list       列出         markai list [--limit 20] [--page 1] [--subtype contact]
+  browse     交互浏览     输入编号查看详情 n/p/q
   get        查看详情     markai get <id>
   delete     删除         markai delete <id>
   calendar   生成日历     markai calendar <id>
@@ -562,6 +563,7 @@ def main():
 
     elif cmd == "list":
         limit = 20
+        page = 1
         subtype = ""
         # markai list types → 列出所有类型
         if len(args) >= 2 and args[1] == "types":
@@ -571,14 +573,19 @@ def main():
             idx = args.index("--limit")
             if idx + 1 < len(args):
                 limit = int(args[idx + 1])
+        if "--page" in args:
+            idx = args.index("--page")
+            if idx + 1 < len(args):
+                page = max(1, int(args[idx + 1]))
         if "--subtype" in args:
             idx = args.index("--subtype")
             if idx + 1 < len(args):
                 subtype = args[idx + 1]
+        offset = (page - 1) * limit
         if subtype:
-            entries = get_typed(subtype, limit=limit)
+            entries = get_typed(subtype, limit=limit, offset=offset)
         else:
-            entries = list_entries(limit=limit)
+            entries = list_entries(limit=limit, offset=offset)
         print_json(entries)
 
     elif cmd == "get":
@@ -591,6 +598,59 @@ def main():
         else:
             print(f"未找到: {args[1]}", file=sys.stderr)
             sys.exit(1)
+
+    elif cmd == "browse":
+        """交互式浏览：滚动选择并查看详情"""
+        page = 1
+        limit = 10
+        while True:
+            offset = (page - 1) * limit
+            entries = list_entries(limit=limit, offset=offset)
+            if not entries:
+                print(f"📭 第 {page} 页没有更多条目了", file=sys.stderr)
+                break
+            print(f"\n{'='*50}", file=sys.stderr)
+            print(f"📋 MarkAI 条目列表（第 {page} 页）", file=sys.stderr)
+            print(f"{'='*50}", file=sys.stderr)
+            for i, e in enumerate(entries, 1):
+                num = offset + i
+                st = e.get("content_subtype", "") or ""
+                st_tag = f" [{st}]" if st else ""
+                print(f"  {num}. {e['title']}{st_tag}", file=sys.stderr)
+            print(f"{'='*50}", file=sys.stderr)
+            print(f"  输入编号查看详情 | n 下一页 | p 上一页 | q 退出", file=sys.stderr)
+            try:
+                inp = input("> ").strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                break
+            if inp == 'q':
+                break
+            elif inp == 'n':
+                page += 1
+            elif inp == 'p':
+                page = max(1, page - 1)
+            elif inp.isdigit():
+                idx = int(inp) - 1
+                entries_all = list_entries(limit=99999)
+                if 0 <= idx < len(entries_all):
+                    e = entries_all[idx]
+                    print(f"\n{'='*50}", file=sys.stderr)
+                    print(f"  📌 {e['title']}", file=sys.stderr)
+                    if e.get('content_subtype'):
+                        print(f"  🏷 类型: {e['content_subtype']}", file=sys.stderr)
+                    print(f"  🏷 标签: {' · '.join(e['tags'])}", file=sys.stderr)
+                    print(f"  📝 {e['summary']}", file=sys.stderr)
+                    print(f"  🆔 {e['id']}", file=sys.stderr)
+                    print(f"{'='*50}", file=sys.stderr)
+                else:
+                    print("⚠️ 编号超出范围", file=sys.stderr)
+            else:
+                # 当作 ID 尝试
+                e = get_entry(inp)
+                if e:
+                    print_json(e)
+                else:
+                    print("⚠️ 无效输入", file=sys.stderr)
 
     elif cmd == "delete":
         if len(args) < 2:
