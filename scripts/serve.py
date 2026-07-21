@@ -147,23 +147,32 @@ def render_card_html(e, query=""):
 
 
 def render_sidebar(types_list, active_type="", query="", back_params="", bottom_text="", show_all_active=True):
-    nav_buttons = ""
+    total_records = list_entries(limit=99999)
+    rec_count = len(total_records)
     ac = "active" if show_all_active and not active_type and not query else ""
-    nav_buttons += f'<a href="/" class="nav-btn {ac}">📋 全部笔记</a>\n'
+
+    # Records section
+    records_html = f'<a href="/" class="nav-btn {ac}">📋 全部笔记 ({rec_count})</a>\n'
+
+    # Lists section
+    lists_html = ""
     for t in types_list:
         sn = t["name"]
         icon = t.get("icon", "📌")
         cnt = t.get("count", 0)
         ac2 = "active" if active_type == sn else ""
         href = f"/list?type={esc(sn)}"
-        nav_buttons += f'<a href="{href}" class="nav-btn {ac2}" style="--nav-c:{t["color"]}">{icon} {esc(sn)} ({cnt})</a>\n'
+        lists_html += f'<a href="{href}" class="nav-btn {ac2}" style="--nav-c:{t["color"]}">{icon} {esc(sn)} ({cnt})</a>\n'
 
-    total = sum(t["count"] for t in types_list)
     return f"""<div class="sidebar">
   <div class="logo">📌 MarkAI <small>v3</small></div>
   <div class="nav-section">
-    <div class="nav-section-title">类型筛选</div>
-    {nav_buttons}
+    <div class="nav-section-title">📋 Records · 笔记</div>
+    {records_html}
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-title">📊 Lists · 清单</div>
+    {lists_html}
   </div>
   <div class="sidebar-footer">
     <a href="/stats">📊 统计面板</a>
