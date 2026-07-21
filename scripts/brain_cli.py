@@ -512,8 +512,7 @@ def main():
 命令:
   search     搜索         markai search "关键词" [--ranked]
   check      重复检测     markai check "内容"
-  list       列出         markai list [--limit 20] [--page 1] [--subtype contact]
-  browse     交互浏览     输入编号查看详情 n/p/q
+  list       浏览         markai list [--json] [--page 2] [--limit 10] [--subtype contact]
   get        查看详情     markai get <id>
   delete     删除         markai delete <id>
   calendar   生成日历     markai calendar <id>
@@ -562,13 +561,16 @@ def main():
         print_json(results)
 
     elif cmd == "list":
-        limit = 20
+        limit = 10
         page = 1
         subtype = ""
+        json_mode = "--json" in args
+
         # markai list types → 列出所有类型
         if len(args) >= 2 and args[1] == "types":
             print_json(get_all_types())
             return
+
         if "--limit" in args:
             idx = args.index("--limit")
             if idx + 1 < len(args):
@@ -581,44 +583,40 @@ def main():
             idx = args.index("--subtype")
             if idx + 1 < len(args):
                 subtype = args[idx + 1]
+
         offset = (page - 1) * limit
-        if subtype:
-            entries = get_typed(subtype, limit=limit, offset=offset)
-        else:
-            entries = list_entries(limit=limit, offset=offset)
-        print_json(entries)
 
-    elif cmd == "get":
-        if len(args) < 2:
-            print("用法: markai get <id>", file=sys.stderr)
-            sys.exit(1)
-        entry = get_entry(args[1])
-        if entry:
-            print_json(entry)
-        else:
-            print(f"未找到: {args[1]}", file=sys.stderr)
-            sys.exit(1)
+        # --json 模式：输出纯数据
+        if json_mode:
+            if subtype:
+                entries = get_typed(subtype, limit=limit, offset=offset)
+            else:
+                entries = list_entries(limit=limit, offset=offset)
+            print_json(entries)
+            return
 
-    elif cmd == "browse":
-        """交互式浏览：滚动选择并查看详情"""
-        page = 1
-        limit = 10
+        # 默认交互式浏览
         while True:
-            offset = (page - 1) * limit
-            entries = list_entries(limit=limit, offset=offset)
+            cur_offset = (page - 1) * limit
+            if subtype:
+                entries = get_typed(subtype, limit=limit, offset=cur_offset)
+            else:
+                entries = list_entries(limit=limit, offset=cur_offset)
             if not entries:
                 print(f"📭 第 {page} 页没有更多条目了", file=sys.stderr)
                 break
             print(f"\n{'='*50}", file=sys.stderr)
-            print(f"📋 MarkAI 条目列表（第 {page} 页）", file=sys.stderr)
+            total = list_entries(limit=99999)
+            total_msg = f"（共 {len(total)} 条）" if not subtype else ""
+            print(f"📋 MarkAI{total_msg}  第 {page} 页", file=sys.stderr)
             print(f"{'='*50}", file=sys.stderr)
             for i, e in enumerate(entries, 1):
-                num = offset + i
+                num = cur_offset + i
                 st = e.get("content_subtype", "") or ""
                 st_tag = f" [{st}]" if st else ""
                 print(f"  {num}. {e['title']}{st_tag}", file=sys.stderr)
             print(f"{'='*50}", file=sys.stderr)
-            print(f"  输入编号查看详情 | n 下一页 | p 上一页 | q 退出", file=sys.stderr)
+            print(f"  编号→详情 | n下一页 | p上一页 | q退出 | json", file=sys.stderr)
             try:
                 inp = input("> ").strip().lower()
             except (EOFError, KeyboardInterrupt):
@@ -629,11 +627,17 @@ def main():
                 page += 1
             elif inp == 'p':
                 page = max(1, page - 1)
+            elif inp == 'json':
+                if subtype:
+                    all_e = get_typed(subtype, limit=99999)
+                else:
+                    all_e = list_entries(limit=99999)
+                print_json(all_e)
             elif inp.isdigit():
                 idx = int(inp) - 1
-                entries_all = list_entries(limit=99999)
-                if 0 <= idx < len(entries_all):
-                    e = entries_all[idx]
+                all_total = list_entries(limit=99999)
+                if 0 <= idx < len(all_total):
+                    e = all_total[idx]
                     print(f"\n{'='*50}", file=sys.stderr)
                     print(f"  📌 {e['title']}", file=sys.stderr)
                     if e.get('content_subtype'):
@@ -645,12 +649,22 @@ def main():
                 else:
                     print("⚠️ 编号超出范围", file=sys.stderr)
             else:
-                # 当作 ID 尝试
                 e = get_entry(inp)
                 if e:
                     print_json(e)
                 else:
-                    print("⚠️ 无效输入", file=sys.stderr)
+                    print("⚠️ 无效输入。输入编号、ID、n/p/q/json", file=sys.stderr)
+
+    elif cmd == "get":
+        if len(args) < 2:
+            print("用法: markai get <id>", file=sys.stderr)
+            sys.exit(1)
+        entry = get_entry(args[1])
+        if entry:
+            print_json(entry)
+        else:
+            print(f"未找到: {args[1]}", file=sys.stderr)
+            sys.exit(1)
 
     elif cmd == "delete":
         if len(args) < 2:
