@@ -509,7 +509,9 @@ def main():
     # 无参数 → 启动 Web Server
     if not args:
         port = 8888
-        script = Path(__file__).parent / "serve.py"
+        # 解析 symlink，找到真实的脚本目录
+        real_path = os.path.realpath(__file__)
+        script = Path(real_path).parent / "serve.py"
         print(f"📌 MarkAI Web UI starting at http://localhost:{port}")
         print(f"   打开浏览器访问即可浏览和搜索知识库")
         print(f"   按 Ctrl+C 停止\n")
