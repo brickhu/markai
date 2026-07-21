@@ -146,10 +146,10 @@ def render_card_html(e, query=""):
 </a>"""
 
 
-def render_sidebar(types_list, active_type="", query="", back_params="", bottom_text=""):
+def render_sidebar(types_list, active_type="", query="", back_params="", bottom_text="", show_all_active=True):
     nav_buttons = ""
-    ac = "active" if not active_type and not query else ""
-    nav_buttons += f'<a href="/{back_params}" class="nav-btn {ac}">📌 全部</a>\n'
+    ac = "active" if show_all_active and not active_type and not query else ""
+    nav_buttons += f'<a href="/" class="nav-btn {ac}">📌 全部</a>\n'
     for t in types_list:
         sn = t["subtype"]
         style = TYPE_STYLES.get(sn, DEFAULT_STYLE)
@@ -337,7 +337,7 @@ def render_stats_page():
     last = date_range.get("last", "")[:10] if date_range.get("last") else "-"
 
     types_list = get_all_types()
-    sidebar = render_sidebar(types_list, "", "", "", "统计面板")
+    sidebar = render_sidebar(types_list, "", "", "", "统计面板", show_all_active=False)
 
     return f"""<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
