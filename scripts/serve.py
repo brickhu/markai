@@ -60,11 +60,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(html.encode())
 
     def json(self, data, code=200):
+        payload = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(payload)))
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
-        payload = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.wfile.write(payload)
         self.wfile.flush()
 
