@@ -60,6 +60,22 @@ When storing, you **must** generate these fields automatically — the user neve
 | **tags** | 2–5 tags. Mix languages (e.g. `React`, `前端`, `DeFi`). Prefer domain terminology. |
 | **summary** | One sentence, ≤50 chars. Captures the essence — what makes this entry worth retrieving. |
 
+### 📌 Alias rule — one entity, many names
+
+When storing content that involves people, brands, or terms with common aliases, **add ALL known variants as tags** so the entry is findable regardless of which name the user uses later.
+
+| Scenario | Store tags | Why |
+|----------|-----------|-----|
+| User says "Lily" → store | `Lily, 莉莉, birthday` | 莉莉 is the Chinese name |
+| User says "胡昔文" → also known as "胡昔闻" | `胡昔文, 胡昔闻, birthday` | Same person, character variant |
+| User says "BTC" / "Bitcoin" | `BTC, Bitcoin, 比特币, crypto` | Cross-language |
+| User says "特斯拉" (car) | `Tesla, 特斯拉, 车险` | English + Chinese name |
+
+**How it works:** When the user later asks about "莉莉" or "胡昔闻", the FTS5 search matches the tags. No special setup needed.
+
+**When you're unsure about a possible alias**, check with the user:
+> 🤔 「胡昔闻」是不是之前存的「胡昔文」同一个人？加上别名方便以后搜索？
+
 ---
 
 ## CLI Reference
@@ -184,7 +200,7 @@ When you store something with a **future date** (birthday, deadline, trip, bill)
 markai calendar <id>
 ```
 
-This creates a file at `~/.agents/skills/markai/data/<id>.ics`.
+This creates a file at `~/.markai/<id>.ics`.
 
 **Two ways to use it:**
 
@@ -312,7 +328,7 @@ User: [sends a screenshot of a flight confirmation]
    Terminal 3, Seat 12A, Booking ref: ABC123, Gate B22"
 
 → Step 3: Copy image to data/images/
-  $ cp /path/to/image.png ~/.agents/skills/markai/data/images/img_20260815.png
+  $ cp /path/to/image.png ~/.markai/images/img_20260815.png
 
 → Step 4: Duplicate check on the description text
 
