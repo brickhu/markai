@@ -105,13 +105,13 @@ No sign-up. No API keys. No telemetry. Just Python and SQLite.
 
 ---
 
-## 🧩 Works across any agent
+## 🧩 One knowledge. Any agent.
 
 MarkAI is a SKILL.md — the universal format for AI agent capabilities. It works with **Kun**, **Claude Code**, **Cursor**, **Windsurf**, **Gemini**, **Copilot**, and any agent that reads SKILL.md.
 
-**Your memory follows you, not the tool.**
+**Your knowledge is unified. Switch agents, keep everything.**
 
-Switch agents? Your knowledge is just a `npx skills add brickhu/markai` away. The same `~/.markai/brain.db` powers every conversation, everywhere.
+Your data is not locked inside one tool. It lives in `~/.markai/brain.db` — one file, shared across every agent you use. Install MarkAI on a new agent and your entire memory is there instantly. No export. No import. No migration.
 
 ---
 

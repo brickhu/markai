@@ -103,13 +103,13 @@ MarkAI: ✅ MarkAI 已更新：莉莉生日
 
 ---
 
-## 🧩 跨 Agent 通用
+## 🧩 一个知识库，任何 Agent 都能用
 
 MarkAI 是一个 SKILL.md——AI Agent 能力的通用格式。支持 **Kun**、**Claude Code**、**Cursor**、**Windsurf**、**Gemini**、**Copilot** 等任何支持 SKILL.md 的 Agent。
 
-**你的记忆跟着你走，不是跟着工具走。**
+**你的知识是统一的。换 Agent，知识不变。**
 
-换 Agent 了？只需重新 `npx skills add brickhu/markai`。同一个 `~/.markai/brain.db`，所有对话、所有工具，一处记忆。
+数据不绑定任何一个工具。它统一存在 `~/.markai/brain.db` 里——一个文件，所有 Agent 共享。换 Agent 时安装一下 MarkAI，记忆立刻就有。不需要导出、导入、迁移。
 
 ---
 
