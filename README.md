@@ -16,25 +16,25 @@ MarkAI is a personal knowledge base that lives inside your AI agent. You tell it
 
 ## 🤔 What problem does it solve?
 
-You talk to your AI agent every day. But it forgets everything after each conversation. That person's birthday you asked about last week? Gone. That article you wanted to revisit? Forgotten. That insight you had at 2 AM? Lost.
+You use different agents for different tasks — Kun for daily chat, Claude Code for coding, Cursor for frontend work. But **each agent has its own memory**. Lily's birthday you saved in one agent? The others don't know. That article you bookmarked? Trapped in a single tool.
 
-**MarkAI gives your agent a memory that doesn't fade.**
+**MarkAI is one brain shared across every agent. What one learns, all know.**
 
 ---
 
 ## 💡 How it works — 30 seconds
 
 ```
-You:    Remember: Lily's birthday is May 20, 2019.
-MarkAI: ✅ Stored.
+You (in Kun):    Remember: Lily's birthday is May 20, 2019.
+MarkAI:          ✅ Stored.
 
-... 3 months later ...
+... switch to Claude Code for coding ...
 
-You:    When is Lily's birthday?
-MarkAI: May 20, 2019 — that's in 2 days! 🎂 Need gift ideas?
+You (in Claude): When is Lily's birthday?
+MarkAI:          May 20, 2019 — that's in 2 days! 🎂 Need gift ideas?
 ```
 
-That's it. No commands to memorize. No folders to organize. Just talk.
+That's it. Save once in any agent. All agents know. No export. No import.
 
 ---
 
