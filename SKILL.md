@@ -60,6 +60,26 @@ When storing, you **must** generate these fields automatically — the user neve
 | **tags** | 2–5 tags. Mix languages (e.g. `React`, `前端`, `DeFi`). Prefer domain terminology. |
 | **summary** | One sentence, ≤50 chars. Captures the essence — what makes this entry worth retrieving. |
 
+### 🏷 Knowledge classification — not all entries are equal
+
+When storing, classify the content type so MarkAI can handle it appropriately later:
+
+| Type | Signal | Mark as | Example |
+|------|--------|---------|---------|
+| **knowledge** | Fact, paper, article, how-to, concept | `content_type=text` or `url` | VSRM paper, Bitcoin ETF date |
+| **reminder** | Time-sensitive event, deadline, upcoming date | `content_type=text` + tag `日程` | Car insurance renewal, flight |
+| **person** | Contact info, preference, relationship | Always tag with the person's name | Lily birthday, phone number |
+| **note** | Fleeting idea, draft, temporary | `content_type=text` + tag `草稿` | Late-night inspiration |
+
+**How the type affects what MarkAI does:**
+
+| Type | Storage behavior | Retrieval behavior |
+|------|-----------------|-------------------|
+| knowledge | Index for search, link to related topics | Can be cited, summarized, cross-referenced |
+| reminder | Auto-offer calendar .ics, check expiry | If near due date → proactively alert |
+| person | Always add to person profile aggregation | Synthesize with other entries about same person |
+| note | Store quietly, don't over-analyze | Lower priority in search results |
+
 ### 📌 Alias rule — one entity, many names
 
 When storing content that involves people, brands, or terms with common aliases, **add ALL known variants as tags** so the entry is findable regardless of which name the user uses later.
@@ -510,13 +530,50 @@ markai search "<keywords>" --ranked --limit 5
 | Title/summary hit | Semantic match | Tag-only match | No match |
 | **Action** | Inject into context | Mention: *"N related entries in your KB, want me to expand?"* | Say nothing |
 
-### Step 3: Augment Format
+### Step 3: Augment — synthesize, don't just list
+
+**CRITICAL: When multiple entries share the same person/topic (via tags), synthesize a coherent answer. Do NOT list each entry separately.**
 
 ```
 📚 From your MarkAI:
-- **{title}**: {summary} ({date})
+- **{title}**: {summary} ({date})          ← single result, OK to list
+```
 
-Based on the above, {normal answer}...
+```
+📚 From your MarkAI:
+
+{person} 的所有已知信息：
+- 生日：{date}
+- 喜好：{preferences}
+- 近期计划：{plans}
+- 联系方式：{contact if any}
+
+💡 {synthesized insight}
+```
+
+**Synthesis rules:**
+
+| User asks | Action |
+|-----------|--------|
+| "What do I know about {person}?" | Search all entries with that tag → build a profile from all results |
+| "What do I know about {topic}?" | Search all related entries → synthesize key points, don't enumerate |
+| "{person} likes what?" | Return the specific answer, plus hint at other known facts |
+| "When is {person}'s birthday?" | Return the date → synthesize: also mention upcoming plans if any |
+
+**Example — Bad (listing):**
+```
+📚 From your MarkAI:
+- 莉莉生日: 5月21日
+- 莉莉喜欢牡丹: She likes peonies
+- 莉莉巴厘岛旅行: going to Bali in August
+```
+
+**Example — Good (synthesis):**
+```
+📚 关于 Lily：
+- 生日：5月21日
+- 喜好：牡丹
+- 5月21日巴厘岛旅行（8月1日出发）
 ```
 
 ### Step 4: Intent Guessing 🎯
