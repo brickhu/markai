@@ -110,25 +110,102 @@ markai export --format json     # or md
 ```
 User: remember: Bitcoin ETF approved in January 2024
 
-→ Step 1: Duplicate check
+→ Step 1: Parse & spot gaps
+  Detect: ambiguous terms, missing details, time-sensitive data
+
+→ Step 2: Resolve gaps (if any)
+  Ambiguity? → Ask user to confirm
+  Real-time data? → web_fetch to enrich
+  No gaps? → Skip to Step 3
+
+→ Step 3: Duplicate check
   $ markai check "Bitcoin ETF approved in January 2024"
   → duplicates_found: 0 ✅
 
-→ Step 2: Auto-extract metadata
+→ Step 4: Auto-extract metadata
   title: "Bitcoin ETF Approval"
   tags: "Bitcoin,ETF,crypto,regulation"
   summary: "SEC approved spot Bitcoin ETFs in January 2024"
 
-→ Step 3: Store
+→ Step 5: Store
   $ markai save "..." --title "Bitcoin ETF Approval" --tags "..." --summary "..."
 
 → Reply: ✅ Stored: Bitcoin ETF Approval (ID: abc123)
 ```
 
+### ⚡ Information Gap Detection (MANDATORY before storing)
+
+Before storing ANY entry, scan for these two gap types:
+
+#### Gap Type 1: Ambiguity / Incomplete Info
+
+If the user's input has unclear or incomplete terms, **ask to confirm** before storing.
+
+| Signal | Example | Action |
+|--------|---------|--------|
+| Truncated term | "特币" → 比特币？ | Ask: *"你说的「特币」是指「比特币」吗？"* |
+| Missing subject | "生日是5月20日" | Ask: *"这是谁的生日？"* |
+| Vague pronoun | "他上周离职了" | Ask: *"「他」是指谁？"* |
+| Partial number | "价格到了10万+" | Ask: *"是10万美金还是人民币？哪个币种？"* |
+
+**Ask format:**
+
+```
+🤔 信息不太完整，确认一下：
+- 「{term}」是指「{best guess}」吗？
+```
+
+#### Gap Type 2: Real-Time / Verifiable Data
+
+If the content mentions data that can be verified or enriched via web search, **do it before storing**.
+
+| Signal | Action |
+|--------|--------|
+| Price / market data ("价格10万", "涨了20%") | `web_fetch` current price, store both the user's observation + verified data |
+| Event with known date ("上周获批") | Calculate exact date from today |
+| News / announcement | Search to confirm and get exact details |
+| Statistics ("市场份额第一") | Verify and add source |
+
+**Enrich format:**
+
+```
+→ web_fetch to verify...
+→ Enriched content:
+
+原始: "记住：比特币价格已经到了10万+"
+补充: "截至{date}，比特币价格为{verified_price}美金（用户观察到的是{original}）"
+
+→ Store enriched version
+→ Reply: ✅ 已存入并补充了最新数据：比特币当前 ${verified_price}（你观察到的 10万+ 是{timeframe}前的价格）
+```
+
+**Example — Combined gaps:**
+
+```
+User: 记住：特币当前价格已经到了10万+
+
+→ Gap 1 (ambiguity): "特币" → 比特币？
+  Reply: 🤔 你说的「特币」是指「比特币」吗？
+
+  User: 是的
+
+→ Gap 2 (real-time): "当前价格10万+"
+  → web_fetch Bitcoin price
+  → Current: $125,000 USD
+
+→ Store enriched:
+  title: "比特币价格观察"
+  content: "比特币价格已达到10万+美金（2026年7月实际价格：$125,000 USD）"
+  tags: "比特币,crypto,价格"
+
+→ Reply:
+  ✅ 已存入：比特币价格观察
+  📊 联网补充：当前比特币 $125,000 USD（你观察到的 10万+ 是近期低点）
+
 ### Scenario 1b: Duplicate Detected
 
 ```
-→ Step 1: Duplicate check → found 1, similarity: 0.62
+→ Step 3 (duplicate check) → found 1, similarity: 0.62
 → Reply: ⚠️ Similar entry exists: "Bitcoin ETF Approved" (62%). Store / Merge / Skip?
 ```
 
