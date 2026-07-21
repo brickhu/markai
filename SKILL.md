@@ -66,15 +66,14 @@ When storing content that involves people, brands, or terms with common aliases,
 
 | Scenario | Store tags | Why |
 |----------|-----------|-----|
-| User says "Lily" → store | `Lily, 莉莉, birthday` | 莉莉 is the Chinese name |
-| User says "胡昔文" → also known as "胡昔闻" | `胡昔文, 胡昔闻, birthday` | Same person, character variant |
-| User says "BTC" / "Bitcoin" | `BTC, Bitcoin, 比特币, crypto` | Cross-language |
-| User says "特斯拉" (car) | `Tesla, 特斯拉, 车险` | English + Chinese name |
+| User says "Lily" → also known as "Lilith" | `Lily, Lilith, birthday` | Nickname vs full name |
+| User says "BTC" / "Bitcoin" | `BTC, Bitcoin, crypto` | Short vs full name |
+| User says "特斯拉" (car) | `Tesla, 特斯拉, car` | English vs Chinese name |
 
-**How it works:** When the user later asks about "莉莉" or "胡昔闻", the FTS5 search matches the tags. No special setup needed.
+**How it works:** When the user later asks by another variant, FTS5 search matches the tags.
 
 **When you're unsure about a possible alias**, check with the user:
-> 🤔 「胡昔闻」是不是之前存的「胡昔文」同一个人？加上别名方便以后搜索？
+> 🤔 你说的「Lily」全名是 Lilith 吗？加上别名方便以后搜索？
 
 ---
 
@@ -529,13 +528,13 @@ After retrieving and answering, look at what the user asked + what you found, th
 **Example 1 — Birthday:**
 
 ```
-User: When is Huxiwen's birthday?
+User: When is Lily's birthday?
 
-→ Search: 胡昔文生日 is 2019-05-20
+→ Search: Lily生日 is 2019-05-20
 → Today: 2026-05-19
 
 Reply:
-胡昔文的生日是2019年5月20日。
+Lily的生日是2019年5月20日。
 
 💡 明天就是她生日了，只有1天！需要我帮你准备生日祝福语或礼物建议吗？
 ```
@@ -543,13 +542,13 @@ Reply:
 **Example 2 — No time pressure:**
 
 ```
-User: When is Huxiwen's birthday?
+User: When is Lily's birthday?
 
 → Search: 2019-05-20
 → Today: 2026-02-10
 
 Reply:
-胡昔文的生日是2019年5月20日（还有3个多月）。
+Lily的生日是2019年5月20日（还有3个多月）。
 ```
 
 When the date is far away, keep it simple — don't force an intent guess.
