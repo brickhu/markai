@@ -7,6 +7,19 @@ from brain_cli import init_db, list_entries, search_entries_ranked, get_entry, g
 
 HOST = "127.0.0.1"
 
+INDEX = """<!DOCTYPE html><html><body>
+<h2>MarkAI</h2>
+<div id="s">Loading...</div>
+<div id="list"></div>
+<script>
+var A=[],N=0;
+function $(i){return document.getElementById(i)}
+function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function go(){$('list').innerHTML='loading...';fetch('/api/list?limit=99999').then(function(r){return r.json()}).then(function(d){A=d.entries||d;N=0;$('list').innerHTML='';more()})}
+function more(){var nx=Math.min(N+20,A.length),h='';for(var i=N;i<nx;i++){var e=A[i];h+='<div style="padding:8px;border:1px solid #ccc;margin:4px">'+esc(e.title)+'</div>'}if(h){$('list').innerHTML+=h;N=nx;$('s').textContent=A.length+' entries'}}
+go();
+</script></body></html>"""
+
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         parts = urllib.parse.urlparse(self.path)
@@ -14,22 +27,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         path = parts.path
         try:
             if path == "/":
-                self.serve("static/index.html", "text/html; charset=utf-8")
-            elif path == "/debug":
-                self._html("""<!DOCTYPE html><html><body>
-<h2>MarkAI Debug</h2>
-<div id="s">Loading...</div>
-<script>
-var s = document.getElementById('s');
-fetch('/api/stats').then(function(r){return r.json()}).then(function(d){
-  s.innerHTML = 'OK: ' + d.total_entries + ' entries stored';
-}).catch(function(e){
-  s.innerHTML = 'FAIL: ' + JSON.stringify(e);
-  console.error(e);
-});
-</script></body></html>""")
-            elif path == "/favicon.ico":
-                self.serve("static/favicon.ico", "image/x-icon")
+                self._html(INDEX)
             elif path == "/api/list":
                 page = int(params.get("page", 1))
                 limit = int(params.get("limit", 99999))
@@ -50,16 +48,6 @@ fetch('/api/stats').then(function(r){return r.json()}).then(function(d){
         except Exception as e:
             import traceback; traceback.print_exc()
             self.json({"error": str(e)}, 500)
-
-    def serve(self, relpath, mime):
-        full = Path(__file__).parent / relpath
-        if not full.exists():
-            self.send_error(404)
-            return
-        self.send_response(200)
-        self.send_header("Content-Type", mime)
-        self.end_headers()
-        self.wfile.write(full.read_bytes())
 
     def _html(self, html):
         self.send_response(200)
@@ -85,7 +73,6 @@ def main():
     init_db()
     httpd = http.server.HTTPServer((HOST, a.port), Handler)
     print(f"MarkAI → http://{HOST}:{a.port}")
-    print(f"Debug  → http://{HOST}:{a.port}/debug")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
