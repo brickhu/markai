@@ -2,7 +2,7 @@
   <img src="logo.svg" width="120" height="120" alt="MarkAI">
 </p>
 
-# MarkAI — Capture every spark in your agent. AI that knows you.
+# MarkAI — Capture every spark in every agent. AI that knows you.
 
 > 🇨🇳 [中文版本](README_CN.md)
 
