@@ -2,29 +2,28 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MarkAI</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0f0f1a;color:#e0e0e0;padding:20px;max-width:960px;margin:0 auto}
 h1{font-size:24px;margin-bottom:20px;color:#a78bfa}
+.filters{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.filters button{padding:6px 14px;border:1px solid #2a2a3e;border-radius:16px;background:transparent;color:#a78bfa;cursor:pointer;font-size:13px}
+.filters button.active,.filters button:hover{background:#7c3aed22;border-color:#7c3aed}
 .search-box{display:flex;gap:10px;margin-bottom:20px}
 .search-box input{flex:1;padding:12px 16px;border:1px solid #2a2a3e;border-radius:8px;background:#1a1a2e;color:#e0e0e0;font-size:16px;outline:none}
 .search-box input:focus{border-color:#7c3aed}
 .search-box button{padding:12px 24px;background:#7c3aed;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:16px}
-.filters{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
-.filters button{padding:6px 14px;border:1px solid #2a2a3e;border-radius:16px;background:transparent;color:#a78bfa;cursor:pointer;font-size:13px}
-.filters button:hover,.filters button.active{background:#7c3aed22;border-color:#7c3aed}
 .stats{color:#888;font-size:13px;margin-bottom:16px}
-.entry{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:10px;padding:16px;margin-bottom:12px;cursor:pointer;transition:.15s}
+.entry{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:10px;padding:16px;margin-bottom:12px;cursor:pointer}
 .entry:hover{border-color:#7c3aed}
 .entry .title{font-size:16px;font-weight:600;margin-bottom:6px}
 .entry .summary{font-size:14px;color:#aaa;line-height:1.5}
 .tag{display:inline-block;padding:2px 8px;background:#2a2a3e;border-radius:10px;font-size:11px;color:#a78bfa;margin:2px}
 .subtype{display:inline-block;padding:2px 8px;background:#7c3aed22;border-radius:10px;font-size:11px;color:#7c3aed;margin:2px}
-.pages{display:flex;justify-content:center;gap:10px;margin-top:20px}
-.pages button{padding:8px 20px;border:1px solid #2a2a3e;border-radius:8px;background:transparent;color:#a78bfa;cursor:pointer}
-.pages button:disabled{opacity:0.3}
+#more{text-align:center;padding:16px;color:#888;cursor:pointer;display:none}
+#more:hover{color:#a78bfa}
 .modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#000000aa;z-index:100}
 .modal.show{display:flex;align-items:center;justify-content:center}
 .modal-content{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:12px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto}
@@ -32,148 +31,134 @@ h1{font-size:24px;margin-bottom:20px;color:#a78bfa}
 .modal-content .field{margin-bottom:10px}
 .modal-content .field-label{font-size:12px;color:#666;margin-bottom:2px}
 .modal-content .field-value{font-size:15px;color:#e0e0e0;word-break:break-all}
-.modal-content pre{background:#0f0f1a;padding:12px;border-radius:8px;font-size:13px;color:#a78bfa;overflow-x:auto;margin-top:10px;white-space:pre-wrap}
 .close-btn{float:right;background:none;border:none;color:#888;font-size:24px;cursor:pointer}
-.close-btn:hover{color:#fff}
 </style>
 </head>
 <body>
 <h1>📌 MarkAI</h1>
 <div class="filters" id="filters">
-  <button class="active" onclick="loadAll(1)">全部</button>
+  <button class="active" onclick="loadAll()">全部</button>
 </div>
 <div class="search-box">
-  <input id="q" placeholder="搜索知识库..." onkeydown="if(event.key==='Enter')doSearch()">
+  <input id="q" placeholder="搜索..." onkeydown="if(event.key==='Enter')doSearch()">
   <button onclick="doSearch()">搜索</button>
 </div>
 <div id="stats" class="stats"></div>
-<div id="results"></div>
-<div class="pages" id="pages"></div>
+<div id="entries"></div>
+<div id="more" onclick="loadMore()">加载更多 ↓</div>
 <div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="modal-content" id="modalContent"></div>
 </div>
 <script>
-var page = 1, currentType = '';
+var allEntries = [];
+var displayedCount = 0;
+var pageSize = 20;
+var currentType = '';
 
-async function api(u) {
-    var r = await fetch(u);
-    return r.json();
-}
+function api(u) { return fetch(u).then(function(r){return r.json()}); }
 
-function setActive(btn) {
-    document.querySelectorAll('#filters button').forEach(function(b) {
-        b.classList.remove('active');
-    });
-    btn.classList.add('active');
-}
-
-async function loadAll(p) {
-    page = p;
+function loadAll() {
     currentType = '';
-    var btn = document.querySelector('#filters button');
-    if (btn) setActive(btn);
-    var d = await api('/api/list?page=' + p + '&limit=15');
-    render(d, p);
+    document.getElementById('q').value = '';
+    document.getElementById('stats').textContent = '加载中...';
+    api('/api/list?limit=99999').then(function(d){
+        allEntries = d.entries || d;
+        displayedCount = 0;
+        document.getElementById('entries').innerHTML = '';
+        loadMore();
+    });
 }
 
-async function loadType(t) {
-    page = 1;
+function loadType(t) {
     currentType = t;
     document.getElementById('q').value = '';
-    var d = await api('/api/typed?subtype=' + t + '&limit=15');
-    render(d, 1);
-}
-
-async function doSearch() {
-    var q = document.getElementById('q').value.trim();
-    if (!q) return loadAll(1);
-    currentType = '';
-    document.querySelectorAll('#filters button').forEach(function(b) {
-        b.classList.remove('active');
+    api('/api/typed?subtype=' + t + '&limit=99999').then(function(d){
+        allEntries = d.entries || d;
+        displayedCount = 0;
+        document.getElementById('entries').innerHTML = '';
+        loadMore();
     });
-    var d = await api('/api/search?q=' + encodeURIComponent(q));
-    render(d, 1);
 }
 
-async function initFilters() {
-    var types = await api('/api/types');
-    var f = document.getElementById('filters');
-    for (var i = 0; i < types.length; i++) {
-        var t = types[i];
-        var b = document.createElement('button');
-        b.textContent = t.subtype + ' (' + t.count + ')';
-        b.setAttribute('data-type', t.subtype);
-        b.onclick = function() {
-            setActive(b);
-            loadType(b.getAttribute('data-type'));
-        };
-        f.appendChild(b);
-    }
+function doSearch() {
+    var q = document.getElementById('q').value.trim();
+    if (!q) return loadAll();
+    currentType = '';
+    api('/api/search?q=' + encodeURIComponent(q) + '&limit=99999').then(function(d){
+        allEntries = d.entries || d;
+        displayedCount = 0;
+        document.getElementById('entries').innerHTML = '';
+        loadMore();
+    });
 }
 
-function render(data, p) {
-    var r = document.getElementById('results');
-    var s = document.getElementById('stats');
-    var entries = data.entries || data;
-    s.textContent = '共 ' + entries.length + ' 条';
-    if (!entries.length) {
-        r.innerHTML = '<p style="color:#888;margin-top:40px;text-align:center">📭 暂无内容</p>';
-        document.getElementById('pages').innerHTML = '';
-        return;
-    }
+function loadMore() {
+    var next = Math.min(displayedCount + pageSize, allEntries.length);
     var html = '';
-    for (var i = 0; i < entries.length; i++) {
-        var e = entries[i];
+    for (var i = displayedCount; i < next; i++) {
+        var e = allEntries[i];
         html += '<div class="entry" onclick="showDetail(\'' + e.id + '\')">';
-        html += '<div class="title">' + h(e.title) + '</div>';
-        if (e.content_subtype) html += '<span class="subtype">' + h(e.content_subtype) + '</span> ';
-        var tags = e.tags || [];
-        for (var j = 0; j < tags.length; j++) {
-            html += '<span class="tag">' + h(tags[j]) + '</span>';
-        }
-        if (e.summary) html += '<div class="summary">' + h(e.summary) + '</div>';
+        html += '<div class="title">' + esc(e.title) + '</div>';
+        if (e.content_subtype) html += '<span class="subtype">' + esc(e.content_subtype) + '</span> ';
+        if (e.tags) for (var j = 0; j < e.tags.length; j++) html += '<span class="tag">' + esc(e.tags[j]) + '</span>';
+        if (e.summary) html += '<div class="summary">' + esc(e.summary) + '</div>';
         html += '</div>';
     }
-    r.innerHTML = html;
-    var pag = '';
-    if (p > 1) pag += '<button onclick="loadAll(' + (p - 1) + ')">← 上一页</button>';
-    pag += '<span style="color:#666;line-height:32px;margin:0 12px">第 ' + p + ' 页</span>';
-    pag += '<button onclick="loadAll(' + (p + 1) + ')">下一页 →</button>';
-    document.getElementById('pages').innerHTML = pag;
+    document.getElementById('entries').innerHTML += html;
+    displayedCount = next;
+    document.getElementById('stats').textContent = '共 ' + allEntries.length + ' 条  · 已显示 ' + displayedCount + ' 条';
+    document.getElementById('more').style.display = (displayedCount < allEntries.length) ? 'block' : 'none';
 }
 
-async function showDetail(id) {
-    var e = await api('/api/get?id=' + id);
-    if (!e || e.error) return;
-    var m = document.getElementById('modalContent');
-    var html = '<button class="close-btn" onclick="closeModal()">×</button><h2>' + h(e.title) + '</h2>';
-    if (e.content_subtype) html += '<div class="field"><div class="field-label">类型</div><div class="field-value">' + h(e.content_subtype) + '</div></div>';
-    if (e.tags && e.tags.length) {
-        var th = '';
-        for (var i = 0; i < e.tags.length; i++) th += '<span class="tag">' + h(e.tags[i]) + '</span>';
-        html += '<div class="field"><div class="field-label">标签</div><div class="field-value">' + th + '</div></div>';
-    }
-    if (e.summary) html += '<div class="field"><div class="field-label">摘要</div><div class="field-value">' + h(e.summary) + '</div></div>';
-    html += '<div class="field"><div class="field-label">内容</div><div class="field-value" style="color:#aaa">' + h(e.content || '') + '</div></div>';
-    if (e.source_url) html += '<div class="field"><div class="field-label">来源</div><div class="field-value"><a href="' + h(e.source_url) + '" style="color:#60a5fa">' + h(e.source_url) + '</a></div></div>';
-    html += '<div class="field" style="margin-top:12px;color:#555;font-size:12px">🆔 ' + h(e.id) + ' · 📅 ' + h((e.created_at || '').slice(0, 10)) + '</div>';
-    m.innerHTML = html;
-    document.getElementById('modal').classList.add('show');
+function initFilters() {
+    api('/api/types').then(function(types){
+        var f = document.getElementById('filters');
+        for (var i = 0; i < types.length; i++) {
+            (function(t){
+                var b = document.createElement('button');
+                b.textContent = t.subtype + ' (' + t.count + ')';
+                b.onclick = function(){
+                    document.querySelectorAll('#filters button').forEach(function(x){x.classList.remove('active')});
+                    b.classList.add('active');
+                    loadType(t.subtype);
+                };
+                f.appendChild(b);
+            })(types[i]);
+        }
+        loadAll();
+    });
 }
 
-function closeModal() {
-    document.getElementById('modal').classList.remove('show');
+function showDetail(id) {
+    api('/api/get?id=' + id).then(function(e){
+        if (!e || e.error) return;
+        var m = document.getElementById('modalContent');
+        var hh = '<button class="close-btn" onclick="closeModal()">×</button><h2>' + esc(e.title) + '</h2>';
+        if (e.content_subtype) hh += '<div class="field"><div class="field-label">类型</div><div class="field-value">' + esc(e.content_subtype) + '</div></div>';
+        if (e.tags && e.tags.length) {
+            var th = '';
+            for (var i = 0; i < e.tags.length; i++) th += '<span class="tag">' + esc(e.tags[i]) + '</span>';
+            hh += '<div class="field"><div class="field-label">标签</div><div class="field-value">' + th + '</div></div>';
+        }
+        if (e.summary) hh += '<div class="field"><div class="field-label">摘要</div><div class="field-value">' + esc(e.summary) + '</div></div>';
+        hh += '<div class="field"><div class="field-label">内容</div><div class="field-value" style="color:#aaa">' + esc(e.content || '') + '</div></div>';
+        if (e.source_url) hh += '<div class="field"><div class="field-label">来源</div><div><a href="' + esc(e.source_url) + '" style="color:#60a5fa" target="_blank">' + esc(e.source_url) + '</a></div></div>';
+        hh += '<div class="field" style="margin-top:12px;color:#555;font-size:12px">🆔 ' + esc(e.id) + ' · 📅 ' + esc((e.created_at||'').slice(0,10)) + '</div>';
+        m.innerHTML = hh;
+        document.getElementById('modal').classList.add('show');
+    });
 }
 
-function h(t) {
-    if (!t) return '';
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
+
+function esc(s) {
+    if (!s) return '';
     var d = document.createElement('div');
-    d.textContent = t;
+    d.textContent = s;
     return d.innerHTML;
 }
 
 initFilters();
-loadAll(1);
 </script>
 </body>
 </html>
