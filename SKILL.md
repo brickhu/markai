@@ -46,7 +46,7 @@ python3 ~/.agents/skills/markai/scripts/brain_cli.py check "<content to store>"
 | Result | Action |
 |--------|--------|
 | `duplicates_found: 0` | Proceed to store |
-| Similarity ≥ 0.5 | Warn user: *"Similar entry exists: **{title}** ({similarity}%). Store / Merge / Skip?"* |
+| Similarity ≥ 0.5 | User said "remember"/"save"? → auto-update existing entry + notify *"✅ Updated: {title}"*. Without explicit save intent? → warn: *"Similar entry exists ({similarity}%). Keep it as-is?"* |
 
 ---
 
@@ -114,12 +114,17 @@ User: remember: Bitcoin ETF approved in January 2024
   Detect: ambiguous terms, missing details, time-sensitive data
 
 → Step 2: Resolve gaps (if any)
-  Ambiguity? → Ask user to confirm
+  Ambiguity? → Ask user to confirm before proceeding
   Real-time data? → web_fetch to enrich
   No gaps? → Skip to Step 3
 
 → Step 3: Duplicate check
   $ markai check "Bitcoin ETF approved in January 2024"
+```
+
+**Branch A — Clear + no duplicates → store directly (no confirmation):**
+
+```
   → duplicates_found: 0 ✅
 
 → Step 4: Auto-extract metadata
@@ -127,21 +132,41 @@ User: remember: Bitcoin ETF approved in January 2024
   tags: "Bitcoin,ETF,crypto,regulation"
   summary: "SEC approved spot Bitcoin ETFs in January 2024"
 
-→ Step 5: Preview & confirm — SHOW before saving
-  ```
-  📋 预览要存储的内容：
-  标题: Bitcoin ETF Approval
-  标签: Bitcoin, ETF, crypto, regulation
-  摘要: SEC approved spot Bitcoin ETFs in January 2024
-
-  ✅ 确认存储 / ✏️ 修改 / ❌ 取消
-  ```
-
-→ User confirms
-→ Step 6: Store
+→ Step 5: Store silently
   $ markai save "..." --title "Bitcoin ETF Approval" --tags "..." --summary "..."
 
 → Reply: ✅ Stored: Bitcoin ETF Approval (ID: abc123)
+```
+
+**Branch B — Has gaps / ambiguity → show confirmation:**
+
+```
+→ Gap found: partial price data without currency unit
+
+→ Step 4: Auto-extract metadata
+
+→ Step 5: Preview & confirm
+  📋 预览要存储的内容：
+  标题: ...
+  标签: ...
+  摘要: ...
+  ⚠️ 检测到信息缺口：价格「10万+」未指定币种
+
+  ✅ 确认存储 / ✏️ 修改 / ❌ 取消
+```
+
+**Branch C — Duplicate found → update + notify, don't ask:**
+
+```
+  → duplicates_found: 1, similarity: 0.85
+
+→ The user clearly wants this saved ("remember"). So update the existing entry
+  with the new context and notify:
+  $ markai update {existing_id} --title "..." --tags "..." --summary "..."
+
+→ Reply:
+  ✅ 已更新已有条目：「比特币ETF获批」（覆盖了之前的版本）
+  📝 标签已丰富，摘要已更新
 ```
 
 ### ⚡ Information Gap Detection (MANDATORY before storing)
@@ -190,7 +215,7 @@ If the content mentions data that can be verified or enriched via web search, **
 → Reply: ✅ 已存入并补充了最新数据：比特币当前 ${verified_price}（你观察到的 10万+ 是{timeframe}前的价格）
 ```
 
-**Example — Combined gaps:**
+**Example — Combined gaps + duplicate:**
 
 ```
 User: 记住：特币当前价格已经到了10万+
@@ -216,8 +241,15 @@ User: 记住：特币当前价格已经到了10万+
 ### Scenario 1b: Duplicate Detected
 
 ```
-→ Step 3 (duplicate check) → found 1, similarity: 0.62
-→ Reply: ⚠️ Similar entry exists: "Bitcoin ETF Approved" (62%). Store / Merge / Skip?
+→ Step 3 (duplicate check) → found 1, similarity: 0.85
+
+→ User said "remember" → this is an explicit save intent, so:
+  $ markai update {existing_id} --content "新信息..." --tags "新标签" --summary "新摘要"
+  → Entry updated with new context + merged tags
+
+→ Reply:
+  ✅ 已更新：「比特币ETF获批」
+  📝 合并了新标签，摘要已刷新
 ```
 
 ### Scenario 2: Image — Deep extraction, not just a caption 🖼️
