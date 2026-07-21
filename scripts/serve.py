@@ -10,14 +10,15 @@ HOST = "127.0.0.1"
 INDEX = """<!DOCTYPE html><html><body>
 <h2>MarkAI</h2>
 <div id="s">Loading...</div>
-<div id="list"></div>
 <script>
-var A=[],N=0;
-function $(i){return document.getElementById(i)}
-function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
-function go(){fetch('/api/list?limit=99999').then(function(r){return r.json()}).then(function(d){var entries=d.entries||d;document.getElementById('s').textContent='OK: '+entries.length+' entries, first: '+entries[0].title}).catch(function(e){document.getElementById('s').textContent='JSON ERR: '+JSON.stringify(e)})}
-function more(){var nx=Math.min(N+20,A.length),h='';for(var i=N;i<nx;i++){var e=A[i];h+='<div style="padding:8px;border:1px solid #ccc;margin:4px">'+esc(e.title)+'</div>'}if(h){$('list').innerHTML+=h;N=nx;$('s').textContent=A.length+' entries'}}
-go();
+var r=new XMLHttpRequest();
+r.open('GET','/api/list?limit=99999',true);
+r.onload=function(){
+  var d=r.responseText;
+  document.getElementById('s').textContent='Got '+d.length+' bytes, first 200: '+d.substring(0,200);
+};
+r.onerror=function(){document.getElementById('s').textContent='XHR failed'};
+r.send();
 </script></body></html>"""
 
 class Handler(http.server.BaseHTTPRequestHandler):
@@ -32,9 +33,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 page = int(params.get("page", 1))
                 limit = int(params.get("limit", 99999))
                 raw = list_entries(limit=limit, offset=(page-1)*limit)
-                # strip structured_data to keep JSON parseable in browser
-                for e in raw:
-                    e.pop("structured_data", None)
+                for e in raw: e.pop("structured_data", None)
                 self.json(raw)
             elif path == "/api/search":
                 self.json(search_entries_ranked(params.get("q", ""), limit=99999))
