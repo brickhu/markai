@@ -1,156 +1,134 @@
 <!DOCTYPE html>
-<html lang="zh-CN"><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MarkAI</title>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MarkAI</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0f0f1a;color:#e0e0e0;padding:20px;max-width:960px;margin:0 auto}
 h1{font-size:24px;margin-bottom:20px;color:#a78bfa}
+.bar{display:flex;gap:10px;margin-bottom:20px}
+.bar input{flex:1;padding:12px 16px;border:1px solid #2a2a3e;border-radius:8px;background:#1a1a2e;color:#e0e0e0;font-size:16px;outline:none}
+.bar input:focus{border-color:#7c3aed}
+.bar button{padding:12px 24px;background:#7c3aed;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:16px}
 .ft{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
 .ft button{padding:6px 14px;border:1px solid #2a2a3e;border-radius:16px;background:transparent;color:#a78bfa;cursor:pointer;font-size:13px}
 .ft button.sel,.ft button:hover{background:#7c3aed22;border-color:#7c3aed}
-.bar{display:flex;gap:10px;margin-bottom:20px}
-.bar input{flex:1;padding:12px;border:1px solid #2a2a3e;border-radius:8px;background:#1a1a2e;color:#e0e0e0;font-size:16px;outline:none}
-.bar input:focus{border-color:#7c3aed}
-.bar button{padding:12px 24px;background:#7c3aed;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:16px}
-.st{color:#888;font-size:13px;margin-bottom:16px}
-#list{min-height:200px}
+.s{color:#888;font-size:13px;margin-bottom:16px}
 .c{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:10px;padding:16px;margin-bottom:12px;cursor:pointer}
 .c:hover{border-color:#7c3aed}
 .t{font-size:16px;font-weight:600;margin-bottom:6px}
-.d{font-size:14px;color:#aaa;line-height:1.5}
+.d{font-size:14px;color:#aaa}
 .tag{display:inline-block;padding:2px 8px;background:#2a2a3e;border-radius:10px;font-size:11px;color:#a78bfa;margin:2px}
 .stt{display:inline-block;padding:2px 8px;background:#7c3aed22;border-radius:10px;font-size:11px;color:#7c3aed;margin:2px}
 .lm{text-align:center;padding:16px;color:#888;cursor:pointer}
 .lm:hover{color:#a78bfa}
 .modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#000000aa;z-index:100;align-items:center;justify-content:center}
-.modal.show{display:flex}
+.modal.show{display:flex;}
 .mc{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:12px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto}
 .mc h2{color:#a78bfa;margin-bottom:12px;font-size:18px}
 .fi{margin-bottom:10px}
 .fl{font-size:12px;color:#666;margin-bottom:2px}
 .fv{font-size:15px;color:#e0e0e0;word-break:break-all}
 .x{float:right;background:none;border:none;color:#888;font-size:22px;cursor:pointer}
-pre{background:#0f0f1a;padding:10px;border-radius:6px;margin-top:6px;color:#a78bfa;font-size:12px;overflow-x:auto}
-</style></head><body>
+.x:hover{color:#fff}
+</style></head>
+<body>
 <h1>MarkAI</h1>
-<div class="ft" id="ft"><button class="sel" onclick="loadHome()">全部</button></div>
-<div class="bar">
-<input id="q" placeholder="搜索..." onkeydown="if(event.key==='Enter')doSearch()">
-<button onclick="doSearch()">搜索</button>
+<div class="ft" id="ft">
+  <button class="sel" onclick="reset()">全部</button>
 </div>
-<div id="stats" class="st"></div>
-<div id="list"><p style="color:#888;text-align:center;padding:40px">加载中...</p></div>
-<div class="lm" id="lm" onclick="loadMore()">加载更多</div>
-<div class="modal" id="modal" onclick="if(event.target==this)closeModal()"><div class="mc" id="mc"></div></div>
+<div class="bar">
+  <input id="q" placeholder="搜索..." onkeydown="if(event.key==='Enter')search()">
+  <button onclick="search()">搜索</button>
+</div>
+<div class="s" id="s"></div>
+<div id="list"></div>
+<div class="lm" id="lm" onclick="more()">加载更多</div>
+<div class="modal" id="modal" onclick="if(event.target==this)hide()"><div class="mc" id="mc"></div></div>
 <script>
-var all = [], shown = 0, mode = '';
-function esc(s){if(!s)return '';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
-function api(u){return fetch(u).then(function(r){if(!r.ok)throw r.status;return r.json()})}
+var A=[],N=0;
 
-function render(){
-  var el = document.getElementById('list');
-  var next = Math.min(shown + 20, all.length);
-  for(var i=shown;i<next;i++){
-    var e = all[i];
-    var html = '<div class="c" data-i="'+i+'"><div class="t">'+esc(e.title)+'</div>';
-    if(e.content_subtype) html += '<span class="stt">'+esc(e.content_subtype)+'</span>';
-    if(e.tags) for(var j=0;j<e.tags.length;j++) html += '<span class="tag">'+esc(e.tags[j])+'</span>';
-    if(e.summary) html += '<div class="d">'+esc(e.summary)+'</div>';
-    html += '</div>';
-    el.innerHTML += html;
-  }
-  shown = next;
-  document.getElementById('stats').textContent = '共 ' + all.length + ' 条';
-  document.getElementById('lm').style.display = (shown < all.length) ? 'block' : 'none';
-}
+function api(u){return fetch(u).then(function(r){return r.json()})}
+function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
 
-function loadHome(){
-  mode = 'home'; shown = 0;
-  document.getElementById('q').value = '';
-  document.getElementById('list').innerHTML = '<p style="color:#888;text-align:center;padding:40px">加载中...</p>';
+function reset(){
+  st('加载中...');
   api('/api/list?limit=99999').then(function(d){
-    all = d.entries || d;
-    document.getElementById('list').innerHTML = '';
-    shown = 0;
-    render();
-  })[].catch(function(e){document.getElementById('stats').textContent = '❌ 加载失败: '+e;document.getElementById('list').innerHTML = '';});
+    A=d.entries||d;N=0;document.getElementById('list').innerHTML='';more();
+  }).catch(function(e){st('错误: '+e)});
 }
 
-function loadType(t){
-  mode = 'type'; shown = 0;
-  document.getElementById('q').value = '';
-  document.getElementById('list').innerHTML = '<p style="color:#888;text-align:center;padding:40px">加载中...</p>';
+function loadtype(t){
+  st('加载中...');
   api('/api/typed?subtype='+t+'&limit=99999').then(function(d){
-    all = d.entries || d;
-    document.getElementById('list').innerHTML = '';
-    shown = 0;
-    render();
-  })[].catch(function(e){document.getElementById('stats').textContent = '❌ 加载失败: '+e;});
+    A=d.entries||d;N=0;document.getElementById('list').innerHTML='';more();
+  }).catch(function(e){st('错误: '+e)});
 }
 
-function doSearch(){
-  var q = document.getElementById('q').value.trim();
-  if(!q) return loadHome();
-  mode = 'search'; shown = 0;
-  document.getElementById('list').innerHTML = '<p style="color:#888;text-align:center;padding:40px">搜索中...</p>';
-  api('/api/search?q='+encodeURIComponent(q)+'&limit=99999').then(function(d){
-    all = d.entries || d;
-    document.getElementById('list').innerHTML = '';
-    shown = 0;
-    render();
-  })[].catch(function(e){document.getElementById('stats').textContent = '❌ 搜索失败: '+e;});
+function search(){
+  var v=document.getElementById('q').value.trim();
+  if(!v)return reset();
+  st('搜索中...');
+  api('/api/search?q='+encodeURIComponent(v)+'&limit=99999').then(function(d){
+    A=d.entries||d;N=0;document.getElementById('list').innerHTML='';more();
+  }).catch(function(e){st('错误: '+e)});
 }
 
-function loadMore(){render();}
+function more(){
+  var nx=Math.min(N+20,A.length),h='';
+  for(var i=N;i<nx;i++){
+    var e=A[i];
+    h+='<div class="c" data-i="'+i+'"><div class="t">'+esc(e.title)+'</div>';
+    if(e.content_subtype)h+='<span class="stt">'+esc(e.content_subtype)+'</span>';
+    if(e.tags)for(var j=0;j<e.tags.length;j++)h+='<span class="tag">'+esc(e.tags[j])+'</span>';
+    if(e.summary)h+='<div class="d">'+esc(e.summary)+'</div>';
+    h+='</div>';
+  }
+  document.getElementById('list').innerHTML+=h;
+  N=nx;
+  st('共 '+A.length+' 条，已显示 '+N+' 条');
+  document.getElementById('lm').style.display=(N<A.length)?'block':'none';
+}
 
-// Event delegation - click on .c entries
-document.getElementById('list').addEventListener('click',function(ev){
-  var el = ev.target;
-  while(el && el.tagName !== 'DIV') el = el.parentNode;
-  if(!el || !el.dataset || el.dataset.i === undefined) return;
-  var idx = parseInt(el.dataset.i);
-  if(idx<0||idx>=all.length) return;
-  var e = all[idx];
-  if(!e||!e.id) return;
-  api('/api/get?id='+e.id).then(function(detail){
-    if(!detail||detail.error){document.getElementById('stats').textContent='❌ 查看失败';return;}
-    var mc = document.getElementById('mc');
-    var h = '<button class="x" onclick="closeModal()">x</button><h2>'+esc(detail.title)+'</h2>';
-    if(detail.content_subtype) h += '<div class="fi"><div class="fl">类型</div><div class="fv">'+esc(detail.content_subtype)+'</div></div>';
-    if(detail.tags&&detail.tags.length){
-      var th = '';
-      for(var i=0;i<detail.tags.length;i++) th += '<span class="tag">'+esc(detail.tags[i])+'</span>';
-      h += '<div class="fi"><div class="fl">标签</div><div class="fv">'+th+'</div></div>';
-    }
-    if(detail.summary) h += '<div class="fi"><div class="fl">摘要</div><div class="fv">'+esc(detail.summary)+'</div></div>';
-    h += '<div class="fi"><div class="fl">内容</div><div class="fv">'+esc(detail.content||'')+'</div></div>';
-    if(detail.source_url) h += '<div class="fi"><div class="fl">来源</div><div><a href="'+esc(detail.source_url)+'" target="_blank" style="color:#60a5fa">'+esc(detail.source_url)+'</a></div></div>';
-    h += '<div style="margin-top:12px;color:#555;font-size:12px">'+esc(detail.id)+' | '+esc((detail.created_at||'').slice(0,10))+'</div>';
-    mc.innerHTML = h;
-    document.getElementById('modal').classList.add('show');
-  });
-});
+function st(t){document.getElementById('s').textContent=t}
 
-function closeModal(){document.getElementById('modal').classList.remove('show');}
+// 点击条目 → 查看详情（事件代理）
+document.getElementById('list').onclick=function(ev){
+  var el=ev.target;
+  while(el&&!el.classList.contains('c'))el=el.parentNode;
+  if(!el||!el.dataset||el.dataset.i===undefined)return;
+  var idx=parseInt(el.dataset.i),e=A[idx];
+  if(!e)return;
+  api('/api/get?id='+e.id).then(function(e2){
+    if(!e2||e2.error){st('获取失败');return}
+    var mc=document.getElementById('mc'),h='<button class="x" onclick="hide()">x</button><h2>'+esc(e2.title)+'</h2>';
+    if(e2.content_subtype)h+='<div class="fi"><div class="fl">类型</div><div class="fv">'+esc(e2.content_subtype)+'</div></div>';
+    if(e2.tags&&e2.tags.length){var th='';for(var i=0;i<e2.tags.length;i++)th+='<span class="tag">'+esc(e2.tags[i])+'</span>';h+='<div class="fi"><div class="fl">标签</div><div class="fv">'+th+'</div></div>'}
+    if(e2.summary)h+='<div class="fi"><div class="fl">摘要</div><div class="fv">'+esc(e2.summary)+'</div></div>';
+    h+='<div class="fi"><div class="fl">内容</div><div class="fv">'+esc(e2.content||'')+'</div></div>';
+    if(e2.source_url)h+='<div class="fi"><div class="fl">来源</div><div><a href="'+esc(e2.source_url)+'" target="_blank" style="color:#60a5fa">'+esc(e2.source_url)+'</a></div></div>';
+    h+='<div class="fi" style="margin-top:12px;color:#555;font-size:12px">'+esc(e2.id)+' | '+esc((e2.created_at||'').slice(0,10))+'</div>';
+    mc.innerHTML=h;document.getElementById('modal').classList.add('show');
+  }).catch(function(e){st('错误: '+e)});
+};
 
-// Init: load types and build filter buttons
+function hide(){document.getElementById('modal').classList.remove('show')}
+
+// 初始化: 获取类型列表 → 构建筛选按钮 → 加载全部
 api('/api/types').then(function(types){
-  var ft = document.getElementById('ft');
+  var ft=document.getElementById('ft');
   for(var i=0;i<types.length;i++){
-    (function(t){
-      var b = document.createElement('button');
-      b.textContent = t.subtype + ' (' + t.count + ')';
-      b.onclick = function(){
+    (function(ti){
+      var b=document.createElement('button');
+      b.textContent=ti.subtype+'('+ti.count+')';
+      b.onclick=function(){
         document.querySelectorAll('#ft button').forEach(function(x){x.classList.remove('sel')});
-        b.classList.add('sel');
-        loadType(t.subtype);
+        b.classList.add('sel');loadtype(ti.subtype);
       };
       ft.appendChild(b);
     })(types[i]);
   }
-  loadHome();
-})[].catch(function(e){document.getElementById('stats').textContent='❌ 初始化失败: '+e;});
+  reset();
+}).catch(function(e){st('初始化失败: '+e)});
 </script>
-</body></html>
+</body>
+</html>
