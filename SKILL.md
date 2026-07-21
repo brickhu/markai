@@ -141,6 +141,36 @@ markai export --format json     # or md
 
 ## Ingest Workflows
 
+
+### 🧩 Multi-event splitting — one sentence, many facts
+
+**When a single user message contains multiple independent facts or events, split them into separate entries.**
+
+```
+User: 记住：今天是我的生日，我花了888元请客。
+
+→ Detect: 2 independent facts
+  1. "我今天生日" → person info
+  2. "花了888元请客" → expense/consumption
+
+→ Split and store separately:
+  ✅ MarkAI 已存入 2 条：
+  1. 用户生日 — 7月21日
+  2. 生日请客消费888元 — 7月21日
+🏷 生日 · 个人信息；生日 · 消费 · 开支
+```
+
+**Splitting signals (user said multiple things when any of these appear):**
+- 并且 / 还有 / 另外 / also / and also
+- Comma-separated unrelated clauses (生日 + 花钱 are different domains)
+- Multiple dates / numbers that serve different purposes
+
+**When NOT to split:**
+- Same topic, just elaborated: "比特币ETF获批，11只ETF首日交易量46亿" → one entry
+- One fact with context: "莉莉生日5月21日，她是双子座" → one entry (same person)
+
+---
+
 ### Scenario 1: Text + "remember"
 
 ```
