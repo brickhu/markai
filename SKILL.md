@@ -80,6 +80,30 @@ When storing, classify the content type so MarkAI can handle it appropriately la
 | person | Always add to person profile aggregation | Synthesize with other entries about same person |
 | note | Store quietly, don't over-analyze | Lower priority in search results |
 
+### 🔧 Structured data extraction — dynamic subtypes
+
+**When storing, if the content matches a recognizable pattern, auto-extract structured fields and set a custom `content_subtype`. Subtypes are NOT predefined — AI freely names them.**
+
+| Signal | Suggested subtype | Extract structured fields | Example CLI |
+|--------|------------------|--------------------------|-------------|
+| Phone number + name | `contact` | `{"name":"胡飞","phone":"18602814924"}` | `--subtype contact --structured '{"name":"胡飞","phone":"18602814924"}'` |
+| Address / location | `location` | `{"address":"...","city":"...","purpose":"..."}` | `--subtype location --structured '...'` |
+| Amount + category | `expense` | `{"amount":888,"category":"餐饮","date":"2026-07-21"}` | `--subtype expense --structured '...'` |
+| Flight number | `flight` | `{"flight":"CA1234","from":"PEK","to":"SHA","date":"2026-08-15"}` | `--subtype flight --structured '...'` |
+| Price / market data | `price` | `{"asset":"BTC","amount":125000,"unit":"USD"}` | `--subtype price --structured '...'` |
+| Meeting / appointment | `meeting` | `{"with":"...","date":"...","topic":"..."}` | `--subtype meeting --structured '...'` |
+| Book / article reference | `reference` | `{"title":"...","author":"...","url":"..."}` | `--subtype reference --structured '...'` |
+| Any new pattern | Any name | Any useful fields | `--subtype recipe --structured '{"dish":"...","cuisine":"..."}'` |
+
+**CRITICAL: Structured data evolves. If you encounter a pattern not listed above, create a new subtype on the fly. The system is dynamic — no code change needed.**
+
+**After storage, structured entries can be queried with:**
+```bash
+markai typed contact     # All contacts
+markai typed expense     # All expenses
+markai types             # Show all subtypes in use
+```
+
 ### 📌 Alias rule — one entity, many names
 
 When storing content that involves people, brands, or terms with common aliases, **add ALL known variants as tags** so the entry is findable regardless of which name the user uses later.

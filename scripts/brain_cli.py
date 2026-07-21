@@ -52,14 +52,23 @@ def init_db():
             title TEXT NOT NULL DEFAULT '',
             content TEXT NOT NULL DEFAULT '',
             content_type TEXT NOT NULL DEFAULT 'text',
+            content_subtype TEXT DEFAULT '',
             source_url TEXT DEFAULT '',
             tags TEXT NOT NULL DEFAULT '[]',
             summary TEXT NOT NULL DEFAULT '',
             image_path TEXT DEFAULT '',
+            structured_data TEXT DEFAULT '{}',
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
     """)
+
+    # 自动升级旧数据库
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(entries)").fetchall()]
+    if 'content_subtype' not in cols:
+        conn.execute("ALTER TABLE entries ADD COLUMN content_subtype TEXT DEFAULT ''")
+    if 'structured_data' not in cols:
+        conn.execute("ALTER TABLE entries ADD COLUMN structured_data TEXT DEFAULT '{}'")
 
     # FTS5 全文索引 — unicode61 对中英文混搜友好（CJK字符作为独立token）
     try:
@@ -135,19 +144,23 @@ def row_to_dict(row) -> dict:
 
 # ── CRUD ────────────────────────────────────────────────
 def save_entry(title="", content="", content_type="text",
-               source_url="", tags=None, summary="",
-               image_path="") -> dict:
+               content_subtype="", source_url="", tags=None, summary="",
+               image_path="", structured_data=None) -> dict:
     tags = tags or []
+    structured = structured_data or {}
     entry_id = gen_id(content or title)
     now = now_iso()
 
     conn = get_db()
     conn.execute("""
         INSERT OR REPLACE INTO entries (id, title, content, content_type,
-            source_url, tags, summary, image_path, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (entry_id, title, content, content_type, source_url,
-          json.dumps(tags, ensure_ascii=False), summary, image_path, now, now))
+            content_subtype, source_url, tags, summary, image_path,
+            structured_data, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (entry_id, title, content, content_type, content_subtype,
+          source_url, json.dumps(tags, ensure_ascii=False),
+          summary, image_path,
+          json.dumps(structured, ensure_ascii=False), now, now))
     conn.commit()
 
     row = conn.execute("SELECT * FROM entries WHERE id = ?", (entry_id,)).fetchone()
@@ -447,6 +460,31 @@ def get_stats() -> dict:
     }
 
 
+def get_typed(subtype: str, limit: int = 50) -> list:
+    """按 content_subtype 查询，格式化展示结构化字段"""
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT * FROM entries
+        WHERE content_subtype = ?
+        ORDER BY created_at DESC
+        LIMIT ?
+    """, (subtype, limit)).fetchall()
+    conn.close()
+    return [row_to_dict(r) for r in rows]
+
+
+def get_all_types() -> list:
+    """统计所有内容子类型"""
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT content_subtype, COUNT(*) as cnt
+        FROM entries WHERE content_subtype != ''
+        GROUP BY content_subtype ORDER BY cnt DESC
+    """).fetchall()
+    conn.close()
+    return [{"subtype": r["content_subtype"], "count": r["cnt"]} for r in rows]
+
+
 def export_entries(fmt: str = "json") -> str:
     entries = list_entries(limit=99999)
     if fmt == "md":
@@ -469,7 +507,7 @@ def main():
     args = sys.argv[1:]
     if not args:
         print("MarkAI · 个人 AI 知识库\n用法: markai <command> [args...]", file=sys.stderr)
-        print("命令: save, update, search, check, list, get, delete, calendar, stats, export", file=sys.stderr)
+        print("命令: save, update, search, check, list, get, delete, calendar, typed, types, stats, export", file=sys.stderr)
         sys.exit(1)
 
     init_db()
@@ -477,6 +515,8 @@ def main():
 
     if cmd == "save":
         title = content = source_url = summary = image_path = ""
+        content_subtype = ""
+        structured_json = ""
         tags = []
         content_type = "text"
 
@@ -487,6 +527,10 @@ def main():
                 i += 1; title = args[i]
             elif a == "--url" and i + 1 < len(args):
                 i += 1; source_url = args[i]; content_type = "url"
+            elif a == "--subtype" and i + 1 < len(args):
+                i += 1; content_subtype = args[i]
+            elif a == "--structured" and i + 1 < len(args):
+                i += 1; structured_json = args[i]
             elif a == "--tags" and i + 1 < len(args):
                 i += 1; tags = [t.strip() for t in args[i].split(",") if t.strip()]
             elif a == "--summary" and i + 1 < len(args):
@@ -506,10 +550,19 @@ def main():
             print("错误: 请提供要保存的内容", file=sys.stderr)
             sys.exit(1)
 
+        # 解析结构化数据
+        structured = {}
+        if structured_json:
+            try:
+                structured = json.loads(structured_json)
+            except json.JSONDecodeError:
+                pass
+
         entry = save_entry(
             title=title, content=content, content_type=content_type,
+            content_subtype=content_subtype,
             source_url=source_url, tags=tags, summary=summary,
-            image_path=image_path
+            image_path=image_path, structured_data=structured
         )
         print_json(entry)
 
@@ -594,6 +647,23 @@ def main():
             sys.exit(1)
         ok = delete_entry(args[1])
         print_json({"deleted": ok, "id": args[1]})
+
+    elif cmd == "typed":
+        if len(args) < 2:
+            print("用法: markai typed <subtype>  例如: markai typed contact", file=sys.stderr)
+            print("       markai types           列出所有类型", file=sys.stderr)
+            sys.exit(1)
+        rows = get_typed(args[1])
+        for r in rows:
+            sd = r.pop("structured_data", {})
+            if isinstance(sd, str):
+                try: sd = json.loads(sd)
+                except: sd = {}
+            r["structured"] = sd
+        print_json(rows)
+
+    elif cmd == "types":
+        print_json(get_all_types())
 
     elif cmd == "stats":
         print_json(get_stats())
