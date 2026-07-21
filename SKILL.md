@@ -215,11 +215,54 @@ User: 记住：特币当前价格已经到了10万+
 2. Copy image to `~/.agents/skills/markai/data/images/`
 3. Store description + image path via `markai save`
 
-### Scenario 3: URL
+### Scenario 3: URL — Fetch content, not the link 🔗
 
-1. Use `web_fetch` to get page content
-2. Duplicate check → extract title/tags/summary
-3. Store with `--url` flag
+**CRITICAL: Never store a URL as the content. Always fetch and store the actual page content.**
+
+When the user provides a URL (with or without "remember"):
+
+```
+User: Remember: https://openai.com/index/chatgpt-memory
+
+→ Step 1: Fetch the actual content
+  $ web_fetch https://openai.com/index/chatgpt-memory
+  → Title: "Memory and new controls for ChatGPT"
+  → Full text: "We're testing the ability for ChatGPT to remember things..."
+  → Published: Feb 13, 2024
+
+→ Step 2: Duplicate check on the fetched content
+  $ markai check "OpenAI announced memory for ChatGPT..."
+  → duplicates_found: 0 ✅
+
+→ Step 3: Auto-extract metadata
+  title: "ChatGPT Memory Feature"
+  tags: "OpenAI,ChatGPT,memory,AI"
+  summary: "OpenAI launched memory controls for ChatGPT, Feb 2024"
+
+→ Step 4: Store the FULL fetched content + source URL
+  $ markai save "Full article text here..." \
+      --title "ChatGPT Memory Feature" \
+      --tags "OpenAI,ChatGPT,memory,AI" \
+      --summary "OpenAI launched memory controls for ChatGPT, Feb 2024" \
+      --url "https://openai.com/index/chatgpt-memory"
+
+→ Reply:
+  ✅ 已存入：ChatGPT Memory Feature
+  📄 已抓取全文内容（OpenAI, Feb 2024）
+  🔗 来源: https://openai.com/index/chatgpt-memory
+```
+
+**What counts as "the content":**
+- ✅ The article's full text (all paragraphs, key data, dates, quotes)
+- ✅ Author, publish date, site name
+- ❌ Just the URL
+- ❌ Only the title
+- ❌ A two-sentence summary without the body
+
+**If `web_fetch` fails** (paywall, JS-only, blocked):
+- Save what you can get + the URL
+- Add tag `partial-fetch`
+- Warn the user: *"⚠️ 只能抓取到部分内容，已保存链接供后续手动查看"*
 
 ### Scenario 4: Ambiguous — user didn't say "remember"
 
