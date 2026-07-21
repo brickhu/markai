@@ -127,7 +127,18 @@ User: remember: Bitcoin ETF approved in January 2024
   tags: "Bitcoin,ETF,crypto,regulation"
   summary: "SEC approved spot Bitcoin ETFs in January 2024"
 
-→ Step 5: Store
+→ Step 5: Preview & confirm — SHOW before saving
+  ```
+  📋 预览要存储的内容：
+  标题: Bitcoin ETF Approval
+  标签: Bitcoin, ETF, crypto, regulation
+  摘要: SEC approved spot Bitcoin ETFs in January 2024
+
+  ✅ 确认存储 / ✏️ 修改 / ❌ 取消
+  ```
+
+→ User confirms
+→ Step 6: Store
   $ markai save "..." --title "Bitcoin ETF Approval" --tags "..." --summary "..."
 
 → Reply: ✅ Stored: Bitcoin ETF Approval (ID: abc123)
@@ -239,7 +250,19 @@ User: [sends a screenshot of a flight confirmation]
 
 → Step 4: Duplicate check on the description text
 
-→ Step 5: Store
+→ Step 5: Preview & confirm — SHOW before saving
+  ```
+  📋 预览要存储的内容：
+  标题: CA1234 北京→上海航班
+  标签: 旅行, 航班, 北京, 上海
+  摘要: 8月15日 CA1234 北京飞上海，T3，座位12A
+  内容: CA1234 flight, Beijing→Shanghai, 2026-08-15...
+
+  ✅ 确认存储 / ✏️ 修改 / ❌ 取消
+  ```
+
+→ User confirms
+→ Step 6: Store
   title: "CA1234 北京→上海航班"
   tags: "旅行,航班,北京,上海"
   summary: "8月15日 CA1234 北京飞上海，T3，座位12A"
@@ -324,7 +347,19 @@ User: Remember: https://openai.com/index/chatgpt-memory
   tags: "OpenAI,ChatGPT,memory,AI"
   summary: "OpenAI launched memory controls for ChatGPT, Feb 2024"
 
-→ Step 4: Store the FULL fetched content + source URL
+→ Step 4: Preview & confirm — SHOW before saving
+  ```
+  📋 预览要存储的内容：
+  标题: ChatGPT Memory Feature
+  标签: OpenAI, ChatGPT, memory, AI
+  摘要: OpenAI launched memory controls for ChatGPT, Feb 2024
+  来源: https://openai.com/index/chatgpt-memory
+
+  ✅ 确认存储 / ✏️ 修改 / ❌ 取消
+  ```
+
+→ User confirms
+→ Step 5: Store the FULL fetched content + source URL
   $ markai save "Full article text here..." \
       --title "ChatGPT Memory Feature" \
       --tags "OpenAI,ChatGPT,memory,AI" \
