@@ -115,15 +115,19 @@ Requires: Python 3 (pre-installed on macOS and Linux). Nothing else.
 
 ---
 
-## 🗣️ Trigger words
+## 🗣️ Just say it
 
-Just say any of these naturally in conversation:
+You don't need to learn commands. MarkAI hooks onto natural trigger words in any language:
 
-| 🇨🇳 | 🇬🇧 | 🇯🇵 | 🇰🇷 |
-|-----|-----|-----|-----|
-| 记住 · 存一下 · 备忘 | remember · save this · note to self | 覚えて · メモして | 기억해 · 저장해 |
+| Language | Trigger words |
+|----------|--------------|
+| 🇬🇧 English | remember, save this, note to self, memorize, bookmark, keep this, mark, store this, archive, save for later |
+| 🇨🇳 Chinese | 记住，保存，收藏，备忘，存一下，存档，记下来，收录，保存起来 |
+| 🇯🇵 Japanese | 覚えて，記憶して，メモして，保存 |
+| 🇰🇷 Korean | 기억해，저장해，메모해 |
+| 🌍 Any | Just say what comes naturally — MarkAI will recognize the intent to save |
 
-Or type `/markai` for the dashboard.
+Or type `/markai` to see the dashboard.
 
 ---
 

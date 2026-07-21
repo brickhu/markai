@@ -113,15 +113,19 @@ npx skills add brickhu/markai
 
 ---
 
-## 🗣️ 触发词
+## 🗣️ 直接说就行
 
-对话中自然说出这些词即可：
+不用记命令。MarkAI 会自动识别你的意图：
 
-| 🇨🇳 | 🇬🇧 | 🇯🇵 | 🇰🇷 |
-|-----|-----|-----|-----|
-| 记住 · 存一下 · 备忘 | remember · save this · note to self | 覚えて · メモして | 기억해 · 저장해 |
+| 语言 | 触发词 |
+|------|--------|
+| 🇨🇳 中文 | 记住，保存，收藏，备忘，存一下，存档，记下来，收录，保存起来 |
+| 🇬🇧 English | remember, save this, note to self, memorize, bookmark, keep this |
+| 🇯🇵 日本語 | 覚えて，記憶して，メモして，保存 |
+| 🇰🇷 한국어 | 기억해，저장해，메모해 |
+| 🌍 Any | 直接说就行，MarkAI 会识别你要存储的意图 |
 
-或输入 `/markai` 查看仪表盘。
+或输入 `/markai` 查看知识库。<｜end▁of▁thinking｜>
 
 ---
 
