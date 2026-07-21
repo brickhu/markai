@@ -510,9 +510,6 @@ def main():
 用法: markai <command> [args...]
 
 命令:
-  save       存储知识     markai save "内容" --title "标题" --tags "a,b"
-                         支持 --subtype <type> --structured '{"key":"val"}'
-  update     更新条目     markai update <id> --title "新标题"
   search     搜索         markai search "关键词" [--ranked]
   check      重复检测     markai check "内容"
   list       列出         markai list [--limit 20] [--subtype contact]
@@ -524,64 +521,16 @@ def main():
   export     导出         markai export [--format json|md]
 
 数据目录: ~/.markai/brain.db
+存储操作请通过 Agent 对话完成。
 """, file=sys.stderr)
         sys.exit(0)
 
     init_db()
     cmd = args[0].lower()
 
-    if cmd == "save":
-        title = content = source_url = summary = image_path = ""
-        content_subtype = ""
-        structured_json = ""
-        tags = []
-        content_type = "text"
-
-        i = 1
-        while i < len(args):
-            a = args[i]
-            if a == "--title" and i + 1 < len(args):
-                i += 1; title = args[i]
-            elif a == "--url" and i + 1 < len(args):
-                i += 1; source_url = args[i]; content_type = "url"
-            elif a == "--subtype" and i + 1 < len(args):
-                i += 1; content_subtype = args[i]
-            elif a == "--structured" and i + 1 < len(args):
-                i += 1; structured_json = args[i]
-            elif a == "--tags" and i + 1 < len(args):
-                i += 1; tags = [t.strip() for t in args[i].split(",") if t.strip()]
-            elif a == "--summary" and i + 1 < len(args):
-                i += 1; summary = args[i]
-            elif a == "--image" and i + 1 < len(args):
-                i += 1; image_path = args[i]; content_type = "image"
-            elif a == "--type" and i + 1 < len(args):
-                i += 1; content_type = args[i]
-            elif not a.startswith("--"):
-                content = a
-            i += 1
-
-        if not content and not sys.stdin.isatty():
-            content = sys.stdin.read().strip()
-
-        if not content and content_type != "image":
-            print("错误: 请提供要保存的内容", file=sys.stderr)
-            sys.exit(1)
-
-        # 解析结构化数据
-        structured = {}
-        if structured_json:
-            try:
-                structured = json.loads(structured_json)
-            except json.JSONDecodeError:
-                pass
-
-        entry = save_entry(
-            title=title, content=content, content_type=content_type,
-            content_subtype=content_subtype,
-            source_url=source_url, tags=tags, summary=summary,
-            image_path=image_path, structured_data=structured
-        )
-        print_json(entry)
+    if cmd == "save" or cmd == "update":
+        print("❌ save/update 仅限 Agent 中使用，请通过 AI 对话操作。\n   CLI 可用命令: search, check, list, get, delete, calendar, types, stats, export", file=sys.stderr)
+        sys.exit(1)
 
     elif cmd == "check":
         # 检测重复内容
@@ -641,33 +590,6 @@ def main():
             print_json(entry)
         else:
             print(f"未找到: {args[1]}", file=sys.stderr)
-            sys.exit(1)
-
-    elif cmd == "update":
-        if len(args) < 2:
-            print("用法: markai update <id> [--title ...] [--tags ...] [--summary ...] [--content ...]", file=sys.stderr)
-            sys.exit(1)
-        entry_id = args[1]
-        kwargs = {}
-        i = 2
-        while i < len(args):
-            a = args[i]
-            if a == "--title" and i + 1 < len(args):
-                i += 1; kwargs["title"] = args[i]
-            elif a == "--tags" and i + 1 < len(args):
-                i += 1; kwargs["tags"] = [t.strip() for t in args[i].split(",") if t.strip()]
-            elif a == "--summary" and i + 1 < len(args):
-                i += 1; kwargs["summary"] = args[i]
-            elif a == "--content" and i + 1 < len(args):
-                i += 1; kwargs["content"] = args[i]
-            elif a == "--url" and i + 1 < len(args):
-                i += 1; kwargs["source_url"] = args[i]
-            i += 1
-        entry = update_entry(entry_id, **kwargs)
-        if entry:
-            print_json(entry)
-        else:
-            print(f"未找到: {entry_id}", file=sys.stderr)
             sys.exit(1)
 
     elif cmd == "delete":
