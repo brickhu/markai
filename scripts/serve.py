@@ -60,7 +60,7 @@ def render_page(entries, query, active_type, types_list):
     entries_html = "\n".join(render_card_html(e) for e in entries)
 
     nav_buttons = ""
-    active_class = "active" if not active_type else ""
+    active_class = "active" if not active_type and not query else ""
     esc_q = esc(query)
 
     nav_buttons += f'<a href="/" class="nav-btn {active_class}">📌 全部</a>\n'
