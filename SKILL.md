@@ -3,7 +3,7 @@ name: markai
 description: Capture every spark in every agent. AI that knows you. A personal knowledge base / second brain. Triggers when the user says "remember", "save this", "note to self", "memorize", "记住", "存一下", "备忘", "기억해", "覚えて", "/markai", or sends content that looks like a knowledge fragment or inspiration worth keeping. Stores text, images, and URLs, then automatically retrieves relevant entries to augment every conversation.
 ---
 
-# 📌 MarkAI · Personal AI Knowledge Base
+# MarkAI — One Brain for Every Agent
 
 > **Capture every spark in every agent. AI that knows you.**
 
