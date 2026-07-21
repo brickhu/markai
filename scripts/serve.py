@@ -15,7 +15,7 @@ INDEX = """<!DOCTYPE html><html><body>
 var A=[],N=0;
 function $(i){return document.getElementById(i)}
 function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
-function go(){fetch('/api/stats').then(function(r){return r.json()}).then(function(d){$('s').textContent='Stats OK: '+d.total_entries+' entries';return fetch('/api/list?limit=99999')}).then(function(r){return r.json()}).then(function(d){A=d.entries||d;N=0;$('list').innerHTML='';more()}).catch(function(e){$('s').textContent='Error: '+JSON.stringify(e);console.error(e)})}
+function go(){fetch('/api/list?limit=99999').then(function(r){return r.text()}).then(function(t){document.getElementById('s').textContent='Got '+t.length+' bytes'}).catch(function(e){document.getElementById('s').textContent='ERR: '+JSON.stringify(e)})}
 function more(){var nx=Math.min(N+20,A.length),h='';for(var i=N;i<nx;i++){var e=A[i];h+='<div style="padding:8px;border:1px solid #ccc;margin:4px">'+esc(e.title)+'</div>'}if(h){$('list').innerHTML+=h;N=nx;$('s').textContent=A.length+' entries'}}
 go();
 </script></body></html>"""
