@@ -115,6 +115,93 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
+    # ── Extract types (清单定义) ──
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS extract_types (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE,
+            icon TEXT NOT NULL DEFAULT '📌',
+            color TEXT NOT NULL DEFAULT '#6366f1',
+            fields TEXT NOT NULL DEFAULT '[]',
+            builtin INTEGER NOT NULL DEFAULT 1,
+            summary_config TEXT DEFAULT '{}',
+            actions TEXT DEFAULT '[]',
+            created_at TEXT NOT NULL
+        )
+    """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS extracts (
+            id TEXT PRIMARY KEY,
+            note_id TEXT NOT NULL,
+            type_id TEXT NOT NULL,
+            data TEXT NOT NULL DEFAULT '{}',
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (note_id) REFERENCES entries(id) ON DELETE CASCADE,
+            FOREIGN KEY (type_id) REFERENCES extract_types(id)
+        )
+    """)
+
+    # 种子数据：7 种内置清单
+    existing = conn.execute("SELECT COUNT(*) FROM extract_types").fetchone()[0]
+    if existing == 0:
+        now = now_iso()
+        builtins = [
+            ("contact",   "📞", "#3b82f6",
+             '[{"name":"name","label":"姓名","type":"string","required":true},{"name":"phone","label":"电话","type":"string"},{"name":"email","label":"邮箱","type":"string"},{"name":"company","label":"公司","type":"string"},{"name":"relation","label":"关系","type":"string"}]',
+             '{"type":"count"}', '[{"label":"复制电话","action":"copy_phone"},{"label":"添加到通讯录","action":"add_contact"}]'),
+            ("finance",   "💰", "#ef4444",
+             '[{"name":"type","label":"类型","type":"select","options":["in","out","lend","borrow"]},{"name":"amount","label":"金额","type":"number","required":true},{"name":"category","label":"类目","type":"string"},{"name":"person","label":"对方","type":"string"},{"name":"date","label":"日期","type":"date"},{"name":"note","label":"备注","type":"string"}]',
+             '{"type":"sum_by","field":"type","subfields":{"in":"收入","out":"支出","lend":"借出","borrow":"借入"}}', '[{"label":"导出 CSV","action":"export_csv"}]'),
+            ("product",   "🛍️", "#f59e0b",
+             '[{"name":"name","label":"商品名","type":"string","required":true},{"name":"price","label":"价格","type":"number"},{"name":"url","label":"链接","type":"url"},{"name":"status","label":"状态","type":"select","options":["want","bought","gifted"]}]',
+             '{"type":"count_by","field":"status"}', '[{"label":"打开链接","action":"open_url"}]'),
+            ("moment",   "⏳", "#8b5cf6",
+             '[{"name":"title","label":"事件","type":"string","required":true},{"name":"date","label":"日期","type":"date","required":true},{"name":"type","label":"类型","type":"select","options":["once","yearly"]},{"name":"relation","label":"关联人","type":"string"}]',
+             '{"type":"countdown"}', '[{"label":"添加到日历","action":"add_calendar"}]'),
+            ("transport","🚗", "#10b981",
+             '[{"name":"type","label":"交通方式","type":"select","options":["flight","train","drive"]},{"name":"date","label":"日期","type":"date"},{"name":"from","label":"出发地","type":"string"},{"name":"to","label":"目的地","type":"string"},{"name":"detail","label":"详情","type":"string"}]',
+             '{"type":"count"}', '[{"label":"打开地图","action":"open_map"}]'),
+            ("bookmark", "📝", "#60a5fa",
+             '[{"name":"name","label":"名称","type":"string","required":true},{"name":"category","label":"类目","type":"select","options":["food","place","product","experience"]},{"name":"location","label":"地点","type":"string"},{"name":"source","label":"推荐人","type":"string"}]',
+             '{"type":"count_by","field":"category"}', '[{"label":"打开地图","action":"open_map"},{"label":"复制地址","action":"copy_location"}]'),
+            ("reference","📖", "#a78bfa",
+             '[{"name":"title","label":"标题","type":"string","required":true},{"name":"author","label":"作者","type":"string"},{"name":"url","label":"链接","type":"url"},{"name":"source","label":"来源","type":"string"}]',
+             '{"type":"count"}', '[{"label":"打开链接","action":"open_url"},{"label":"复制引用","action":"copy_citation"}]'),
+        ]
+        for name, icon, color, fields, summary_config, actions in builtins:
+            eid = uuid.uuid4().hex[:12]
+            conn.execute("""
+                INSERT INTO extract_types (id, name, icon, color, fields, builtin, summary_config, actions, created_at)
+                VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)
+            """, (eid, name, icon, color, fields, summary_config, actions, now))
+        conn.commit()
+
+    # ── 迁移旧数据：content_subtype → extracts ──
+    if existing == 0:
+        migrated = 0
+        rows = conn.execute("SELECT id, content_subtype, structured_data FROM entries WHERE content_subtype != ''").fetchall()
+        for row in rows:
+            st = row["content_subtype"]
+            sd = row["structured_data"]
+            if not st:
+                continue
+            # 找到匹配的 extract_type
+            et = conn.execute("SELECT id FROM extract_types WHERE name = ?", (st,)).fetchone()
+            if not et:
+                continue
+            try:
+                data_dict = json.loads(sd) if sd and sd != '{}' else {}
+            except (json.JSONDecodeError, TypeError):
+                data_dict = {}
+            eid = uuid.uuid4().hex[:12]
+            now2 = now_iso()
+            conn.execute("INSERT INTO extracts (id, note_id, type_id, data, created_at) VALUES (?, ?, ?, ?, ?)",
+                         (eid, row["id"], et["id"], json.dumps(data_dict, ensure_ascii=False), now2))
+            migrated += 1
+        if migrated:
+            conn.commit()
+
     conn.close()
 
 
@@ -244,7 +331,100 @@ def get_entry(entry_id: str):
 
 def delete_entry(entry_id: str) -> bool:
     conn = get_db()
+    # 同时删除关联的 extracts
+    conn.execute("DELETE FROM extracts WHERE note_id = ?", (entry_id,))
     cur = conn.execute("DELETE FROM entries WHERE id = ?", (entry_id,))
+    conn.commit()
+    ok = cur.rowcount > 0
+    conn.close()
+    return ok
+
+# ── Extract CRUD ───────────────────────────────────────
+def add_extract(note_id: str, type_name: str, data: dict or None = None) -> dict:
+    """为 note 添加一个 extract（清单项）"""
+    conn = get_db()
+    et = conn.execute("SELECT id FROM extract_types WHERE name = ?", (type_name,)).fetchone()
+    if not et:
+        conn.close()
+        return {"ok": False, "error": f"清单类型不存在: {type_name}"}
+    eid = uuid.uuid4().hex[:12]
+    now = now_iso()
+    data_str = json.dumps(data or {}, ensure_ascii=False)
+    conn.execute("INSERT INTO extracts (id, note_id, type_id, data, created_at) VALUES (?, ?, ?, ?, ?)",
+                 (eid, note_id, et["id"], data_str, now))
+    conn.commit()
+    conn.close()
+    return {"ok": True, "id": eid}
+
+
+def get_extracts(note_id: str = None, type_name: str = None, limit: int = 99999) -> list:
+    """查询 extract（可按 note_id 或 type_name 筛选）"""
+    conn = get_db()
+    sql = """
+        SELECT x.*, et.name as type_name, et.icon, et.color, et.fields as type_fields
+        FROM extracts x
+        JOIN extract_types et ON x.type_id = et.id
+    """
+    params = []
+    conditions = []
+    if note_id:
+        conditions.append("x.note_id = ?")
+        params.append(note_id)
+    if type_name:
+        conditions.append("et.name = ?")
+        params.append(type_name)
+    if conditions:
+        sql += " WHERE " + " AND ".join(conditions)
+    sql += " ORDER BY x.created_at DESC LIMIT ?"
+    params.append(limit)
+    rows = conn.execute(sql, params).fetchall()
+    conn.close()
+
+    result = []
+    for r in rows:
+        d = dict(r)
+        try:
+            d["data"] = json.loads(d.get("data", "{}"))
+        except (json.JSONDecodeError, TypeError):
+            d["data"] = {}
+        d["id"] = d.pop("id")  # keep as id
+        result.append(d)
+    return result
+
+
+def get_extract_types_with_counts() -> list:
+    """列出所有 extract_type（含 extract 计数）"""
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT et.*, COUNT(x.id) as count
+        FROM extract_types et
+        LEFT JOIN extracts x ON x.type_id = et.id
+        GROUP BY et.id
+        ORDER BY et.builtin DESC, et.name ASC
+    """).fetchall()
+    conn.close()
+    result = []
+    for r in rows:
+        d = dict(r)
+        try:
+            d["fields"] = json.loads(d.get("fields", "[]"))
+        except (json.JSONDecodeError, TypeError):
+            d["fields"] = []
+        try:
+            d["summary_config"] = json.loads(d.get("summary_config", "{}"))
+        except (json.JSONDecodeError, TypeError):
+            d["summary_config"] = {}
+        try:
+            d["actions"] = json.loads(d.get("actions", "[]"))
+        except (json.JSONDecodeError, TypeError):
+            d["actions"] = []
+        result.append(d)
+    return result
+
+
+def delete_extract(extract_id: str) -> bool:
+    conn = get_db()
+    cur = conn.execute("DELETE FROM extracts WHERE id = ?", (extract_id,))
     conn.commit()
     ok = cur.rowcount > 0
     conn.close()
@@ -686,6 +866,25 @@ CLI 命令（供脚本/高级使用）:
 
     elif cmd == "types":
         print_json(get_all_types())
+
+    elif cmd == "extracts":
+        type_name = ""
+        if "--type" in args:
+            idx = args.index("--type")
+            if idx + 1 < len(args):
+                type_name = args[idx + 1]
+        elif len(args) >= 2 and not args[1].startswith("--"):
+            type_name = args[1]
+        limit = 20
+        if "--limit" in args:
+            idx = args.index("--limit")
+            if idx + 1 < len(args):
+                limit = int(args[idx + 1])
+        results = get_extracts(type_name=type_name if type_name else None, limit=limit)
+        print_json(results)
+
+    elif cmd == "extract-types":
+        print_json(get_extract_types_with_counts())
 
     elif cmd == "serve":
         import subprocess
