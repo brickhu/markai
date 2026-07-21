@@ -268,6 +268,38 @@ User: [sends a screenshot of a flight confirmation]
 - Add tag `partial-read`
 - Tell the user: *"⚠️ 图中{某部分}无法识别，已保存能提取的内容"*
 
+**Fallback: If the current model/agent does NOT support vision:**
+
+Some agents (or smaller models) cannot see images. In that case:
+
+```
+→ Detect: cannot process image
+→ Save placeholder:
+  $ markai save "Image stored: {filename}" \
+      --title "📷 {filename}" \
+      --tags "pending-vision,image" \
+      --type image \
+      --image "{filename}"
+→ Reply:
+  📷 图片已保存为 {filename}，但当前模型不支持视觉识别。
+  下次用支持图片的 Agent 打开 markai 时，会自动补充内容描述。
+
+  💡 提示：你也可以现在用文字告诉我图片里有什么，我来存。
+```
+
+When a vision-capable agent later encounters a `pending-vision` entry, it should:
+1. Read the image file from `data/images/`
+2. Run the full deep extraction workflow (Scenario 2)
+3. Update the entry with the extracted content
+
+```
+→ Detected pending-vision entry: img_20260815.png
+→ Reading image...
+→ Extracted: "CA1234 flight, Beijing→Shanghai, Aug 15..."
+→ $ markai update {id} --content "..." --title "..." --tags "旅行,航班" --summary "..."
+→ Reply: 🖼️ 已补全：CA1234 北京→上海航班（之前存的图片）
+```
+
 ### Scenario 3: URL — Fetch content, not the link 🔗
 
 **CRITICAL: Never store a URL as the content. Always fetch and store the actual page content.**
