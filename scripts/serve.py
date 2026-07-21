@@ -3,7 +3,7 @@
 import json, sys, os, http.server, urllib.parse, html, re
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from brain_cli import init_db, list_entries, search_entries_ranked, get_entry, get_typed, get_all_types, get_stats, delete_entry
+from brain_cli import init_db, list_entries, search_entries_ranked, get_entry, get_typed, get_all_types, get_stats, delete_entry, get_extracts, get_extract_types_with_counts, add_extract
 
 HOST = "127.0.0.1"
 
@@ -149,15 +149,14 @@ def render_card_html(e, query=""):
 def render_sidebar(types_list, active_type="", query="", back_params="", bottom_text="", show_all_active=True):
     nav_buttons = ""
     ac = "active" if show_all_active and not active_type and not query else ""
-    nav_buttons += f'<a href="/" class="nav-btn {ac}">📌 全部</a>\n'
+    nav_buttons += f'<a href="/" class="nav-btn {ac}">📋 全部笔记</a>\n'
     for t in types_list:
-        sn = t["subtype"]
-        style = TYPE_STYLES.get(sn, DEFAULT_STYLE)
-        cnt = t["count"]
+        sn = t["name"]
+        icon = t.get("icon", "📌")
+        cnt = t.get("count", 0)
         ac2 = "active" if active_type == sn else ""
-        qp = f"?q={urllib.parse.quote(query)}" if query else ""
-        href = f"/?type={esc(sn)}" + (f"&q={urllib.parse.quote(query)}" if query else "")
-        nav_buttons += f'<a href="{href}" class="nav-btn {ac2}" style="--nav-c:{style["border"]}">{style["icon"]} {esc(sn)} ({cnt})</a>\n'
+        href = f"/list?type={esc(sn)}"
+        nav_buttons += f'<a href="{href}" class="nav-btn {ac2}" style="--nav-c:{t["color"]}">{icon} {esc(sn)} ({cnt})</a>\n'
 
     total = sum(t["count"] for t in types_list)
     return f"""<div class="sidebar">
@@ -254,7 +253,7 @@ def render_detail_page(entry, back_q, back_type):
     elif back_type:
         back += "?type=" + urllib.parse.quote(back_type)
 
-    types_list = get_all_types()
+    types_list = get_extract_types_with_counts()
     sidebar = render_sidebar(types_list, back_type, back_q, "", f"当前条目")
     page_title = f"{title} — MarkAI"
 
@@ -297,7 +296,7 @@ def render_detail_page(entry, back_q, back_type):
 def render_confirm_delete(entry):
     eid = esc(entry.get("id", ""))
     title = esc(entry.get("title", ""))
-    types_list = get_all_types()
+    types_list = get_extract_types_with_counts()
     sidebar = render_sidebar(types_list, "", "", "", "确认删除")
 
     return f"""<!DOCTYPE html>
@@ -336,7 +335,7 @@ def render_stats_page():
     first = date_range.get("first", "")[:10] if date_range.get("first") else "-"
     last = date_range.get("last", "")[:10] if date_range.get("last") else "-"
 
-    types_list = get_all_types()
+    types_list = get_extract_types_with_counts()
     sidebar = render_sidebar(types_list, "", "", "", "统计面板", show_all_active=False)
 
     return f"""<!DOCTYPE html>
@@ -372,6 +371,93 @@ def render_stats_page():
 </body></html>"""
 
 
+def render_list_page(type_name, extracts, type_info):
+    """渲染清单列表页"""
+    icon = type_info.get("icon", "📌")
+    color = type_info.get("color", "#6366f1")
+    fields = type_info.get("fields", [])
+    field_labels = {f["name"]: f.get("label", f["name"]) for f in fields}
+    field_keys = [f["name"] for f in fields]
+
+    # 统计汇总
+    summary_config = type_info.get("summary_config", {})
+    sc_type = summary_config.get("type", "count")
+    total = len(extracts)
+
+    summary_html = ""
+    if sc_type == "count":
+        summary_html = f'<div class="stat-card"><div class="stat-num">{total}</div><div class="stat-label">共 {esc(type_name)}</div></div>'
+    elif sc_type == "count_by":
+        sub_field = summary_config.get("field", "type")
+        counts = {}
+        for e in extracts:
+            val = e["data"].get(sub_field, "unknown")
+            counts[val] = counts.get(val, 0) + 1
+        summary_html = "".join(
+            f'<div class="stat-card"><div class="stat-num">{v}</div><div class="stat-label">{esc(k)}</div></div>'
+            for k, v in sorted(counts.items())
+        )
+    elif sc_type == "sum_by":
+        sub_field = summary_config.get("field", "type")
+        subfields = summary_config.get("subfields", {})
+        sums = {}
+        for e in extracts:
+            val = e["data"].get(sub_field, "other")
+            amt = e["data"].get("amount", 0) or 0
+            try:
+                amt = float(amt)
+            except (ValueError, TypeError):
+                amt = 0
+            sums[val] = sums.get(val, 0) + amt
+        summary_html = "".join(
+            f'<div class="stat-card"><div class="stat-num">¥{sums[k]:.0f}</div><div class="stat-label">{esc(subfields.get(k, k))}</div></div>'
+            for k in ["in", "out", "lend", "borrow"] if k in sums
+        )
+    elif sc_type == "countdown":
+        now_iso = str(datetime.now(timezone.utc))[:10]
+        upcoming = sum(1 for e in extracts if str(e["data"].get("date", "")) >= now_iso if e["data"].get("date"))
+        expired = total - upcoming
+        summary_html = f'<div class="stat-card"><div class="stat-num">{upcoming}</div><div class="stat-label">即将到来</div></div><div class="stat-card"><div class="stat-num">{expired}</div><div class="stat-label">已过期</div></div>'
+
+    # 表格行
+    rows_html = ""
+    for e in extracts:
+        data = e["data"]
+        vals = " · ".join(str(data.get(k, "")) for k in field_keys if data.get(k))
+        bold_val = esc(str(data.get(field_keys[0], ""))) if field_keys else ""
+        eid = esc(e.get("id", ""))
+        rows_html += f'<div class="extract-row" onclick="window.location.href=\'/notes?id={esc(e["note_id"])}\'">'
+        rows_html += f'<div class="extract-title">{bold_val}</div>'
+        if vals:
+            rows_html += f'<div class="extract-detail">{esc(vals)}</div>'
+        rows_html += "</div>"
+
+    types_list = get_extract_types_with_counts()
+    sidebar = render_sidebar(types_list, type_name, "", "", "", show_all_active=False)
+
+    page_title = f"{icon} {type_name} — MarkAI"
+
+    return f"""<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{page_title}</title><style>{BASE_CSS}
+.stats-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px}}
+.extract-row{{background:#1a1a2e;border:1px solid #2a2a3e;border-radius:10px;padding:14px;margin-bottom:8px;cursor:pointer;transition:0.15s}}
+.extract-row:hover{{border-color:{color};background:#1e1e3a}}
+.extract-title{{font-size:15px;font-weight:600;color:#f1f5f9;margin-bottom:4px}}
+.extract-detail{{font-size:13px;color:#94a3b8}}
+</style></head><body>
+<div class="wrapper">
+  {sidebar}
+  <div class="main">
+    <div class="breadcrumb"><a href="/">← 首页</a><span>/</span><span>{icon} {esc(type_name)}</span></div>
+    <div class="stats-grid">{summary_html}</div>
+    <div class="stats-line">共 {len(extracts)} 条</div>
+    {rows_html if rows_html else f'<div class="empty-state"><div class="empty-icon">{icon}</div><div class="empty-title">暂无{esc(type_name)}</div><div class="empty-desc">还没有记录，说「记住 xxx」来添加</div></div>'}
+  </div>
+</div>
+</body></html>"""
+
+
 class Handler(http.server.BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
@@ -384,7 +470,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if path == "/":
                 query = params.get("q", "").strip()
                 active_type = params.get("type", "").strip()
-                types_list = get_all_types()
+                types_list = get_extract_types_with_counts()
 
                 if active_type:
                     entries = get_typed(active_type, limit=99999)
@@ -396,14 +482,32 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 html = render_page(entries, query, active_type, types_list)
                 self._html(html)
 
+            elif path == "/list":
+                type_name = params.get("type", "").strip()
+                if not type_name:
+                    self.redirect("/")
+                    return
+                types_all = get_extract_types_with_counts()
+                type_info = None
+                for t in types_all:
+                    if t["name"] == type_name:
+                        type_info = t
+                        break
+                if not type_info:
+                    self._html(render_page([], "", "", get_extract_types_with_counts()))
+                    return
+                extracts = get_extracts(type_name=type_name, limit=99999)
+                html = render_list_page(type_name, extracts, type_info)
+                self._html(html)
+
             elif path == "/detail":
                 entry_id = params.get("id", "").strip()
                 if not entry_id:
-                    self._html(render_page([], "", "", get_all_types()))
+                    self._html(render_page([], "", "", get_extract_types_with_counts()))
                     return
                 entry = get_entry(entry_id)
                 if not entry:
-                    self._html(render_page([], "", "", get_all_types()))
+                    self._html(render_page([], "", "", get_extract_types_with_counts()))
                     return
                 back_q = params.get("q", "")
                 back_type = params.get("type", "")
@@ -413,11 +517,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             elif path == "/delete":
                 entry_id = params.get("id", "").strip()
                 if not entry_id:
-                    self._html(render_page([], "", "", get_all_types()))
+                    self._html(render_page([], "", "", get_extract_types_with_counts()))
                     return
                 entry = get_entry(entry_id)
                 if not entry:
-                    self._html(render_page([], "", "", get_all_types()))
+                    self._html(render_page([], "", "", get_extract_types_with_counts()))
                     return
                 if params.get("confirm") == "1":
                     delete_entry(entry_id)
