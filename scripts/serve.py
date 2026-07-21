@@ -22,7 +22,7 @@ r.onload=function(){
     var data=JSON.parse(r2.responseText);
     var entries=data.entries||data;
     var txt=entries.length+' entries';
-    for(var i=0;i<entries.length;i++) txt+='\n'+entries[i].title;
+    for(var i=0;i<entries.length;i++) txt+=String.fromCharCode(10)+entries[i].title;
     document.getElementById('s').textContent=txt;
   };
   r2.onerror=function(){document.getElementById('s').textContent='List failed'};
